@@ -6,7 +6,7 @@
 
 ## 1. 概要
 
-Note History Diff は、Joplin のノート履歴から 2 つの版を選び、その差分を色分けして表示するデスクトップ版プラグインです。最初の版（MVP）では「今のノートと 1 つ前の版を 1 クリックで比べる」ことを目標にします。v1 のゴールはデスクトップ版のリリースで、モバイル版への対応は v1 の後に行います。
+Note History Diff は、Joplin のノート履歴から 2 つの版を選び、その差分を色分けして表示するデスクトップ版プラグインです。最初の版（MVP）では「今のノートと 1 つ前の版を 1 クリックで比べる」ことを目標にします。v1 のゴールはデスクトップ版の正式リリース（公式プラグイン一覧に掲載され、Joplin 本体のプラグイン検索で見つかる状態。8 章）で、モバイル版への対応は v1 の後に行います。
 
 ### 背景と課題
 
@@ -195,5 +195,51 @@ Joplin は履歴を「前の版との差分」として保存しています。�
 2. **MVP**：F1〜F5 を作り、受け入れ条件を満たす
 3. **次の段階**：F6〜F9（表示と移動の使いやすさ）を足す
 4. **部分的に戻す**：F10 を足す。ノートを書き換えるので、単独でテストしてから公開する
-5. **v1 リリース（ゴール）**：デスクトップ版を Joplin のプラグイン一覧に登録し、[要望のフォーラム](https://discourse.joplinapp.org/t/side-by-side-difference-view-for-note-history/26461)で知らせる
+5. **v1 リリース（ゴール）**：8 章の条件を満たして npm に公開し、公式プラグイン一覧と Joplin 本体の検索に出ることを確かめてから、[要望のフォーラム](https://discourse.joplinapp.org/t/side-by-side-difference-view-for-note-history/26461)で知らせる
 6. **v1 の後**：モバイル版に対応する。F11〜F14 は利用者の声を見て順番を決める
+
+## 8. v1（正式リリース）の条件
+
+v1 は、公式プラグイン一覧（[joplinapp.org/plugins](https://joplinapp.org/plugins/)）に掲載され、Joplin 本体の「プラグイン」画面の検索で見つかる状態を指します。掲載に審査はなく、条件を満たして npm に公開すると自動で一覧に取り込まれます（[公式の開発ガイド](https://cdn.jsdelivr.net/npm/generator-joplin@3.7.2/generators/app/templates/GENERATOR_DOC.md)）。
+
+### 掲載の仕組み
+
+1. `npm publish` で npm に公開する
+2. 公式リポジトリのスクリプトが条件に合うパッケージを取り込む。リポジトリは 30 分ごとに更新される（[joplin/plugins](https://github.com/joplin/plugins)）
+3. Joplin 本体はこのリポジトリから一覧を読み込み、検索・インストール・更新に使う（[公式リポジトリ開設の告知](https://discourse.joplinapp.org/t/official-joplin-plugin-repository-is-now-ready-if-you-are-developing-a-plugin-please-read-on/13635)）
+
+npm に公開した時点で一覧に載るため、v1 より前の試用版は npm には出しません。`.jpl` ファイルを GitHub Releases などで配り、手動でインストールしてもらいます。
+
+### 公開の条件（チェックリスト）
+
+- [ ] npm アカウントを作り、`npm login` する
+- [ ] `package.json` の `name` が `joplin-plugin-` で始まる（予定：`joplin-plugin-note-history-diff`。npm でこの名前が空いているか確かめる）
+- [ ] `package.json` の `keywords` に `joplin-plugin` を含む
+- [ ] `npm run dist` で `publish/` に `.jpl` と `.json` ができている
+- [ ] `manifest.json` の必須項目（`manifest_version`、`name`、`version`、`app_min_version`）を埋める。`version` は `1.0.0` にし、`npm run updateVersion` で `package.json` とそろえる
+- [ ] GitHub の公開リポジトリに push し、`repository_url` と `homepage_url` をそこに向ける。スクリーンショットを相対パスで載せるには、どちらかが GitHub を指している必要がある
+- [ ] `README.md` と `LICENSE`（MIT）を置く
+- [ ] 公開後、npm のキーワード検索、公式プラグイン一覧、Joplin 本体の検索の 3 か所で見つかることを確かめる
+
+### manifest.json の主な項目
+
+項目と使われ方は[マニフェストの仕様](https://joplinapp.org/help/api/references/plugin_manifest)によります。
+
+| 項目 | 設定する値（案） | 使われ方 |
+| --- | --- | --- |
+| `id` | `io.github.<GitHub ユーザー名>.note-history-diff` | プラグインを見分ける ID。公開後は変えない（推測：公式リポジトリのフォルダ名にも使われている） |
+| `name` | Note History Diff | 画面に表示される名前 |
+| `description` | 英語の 1 文（例：Compare two revisions of a note and see what changed.） | 一覧と検索結果に表示される |
+| `keywords` | history, revision, diff, compare, version | 検索に使われる |
+| `categories` | `viewer`（`productivity` も検討） | 一覧のカテゴリ |
+| `platforms` | `["desktop"]` | 省略してもデスクトップ扱い。モバイル対応のときに `mobile` を足す |
+| `app_min_version` | 開発開始時に決める | 対応する Joplin の最小バージョン |
+| `screenshots` | 差分パネルの画面 | 公式サイトの一覧に表示される |
+| `icons` | PNG の 16 / 32 / 48 / 128 px | 一覧のアイコン。省略すると既定のアイコン |
+| `promo_tile` | 440 × 280 px（任意） | 公式サイトのトップページに使われる |
+
+### 一覧から外れる場合
+
+- 動かなくなった、保守されていない、より良いプラグインに置き換えられた、などの理由で「obsolete」にされると、検索に出なくなる（[obsoletes](https://github.com/joplin/plugins/blob/master/readme/obsoletes.md)）
+- 悪意のある版と判断されると、その版は「blocked」になり、インストールできなくなる（[blocked](https://github.com/joplin/plugins/blob/master/readme/blocked.md)）
+- 公式の「Recommended」の印は、今は審査の仕組みがなく、Joplin チームやよく貢献する人のプラグインだけに付いている。v1 の条件には含めない（[recommended](https://github.com/joplin/plugins/blob/master/readme/recommended.md)）
