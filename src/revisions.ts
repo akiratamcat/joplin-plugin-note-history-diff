@@ -131,9 +131,25 @@ interface PatchOutcome {
 	ok: boolean;
 }
 
+// Joplin stores text patches as JSON (the output of patch_make, e.g.
+// `[{"diffs":[[1,"abc"]],"start1":0,...}]`, or `[]` for no change).
+// The older `@@ -1,3 +1,3 @@` text format is accepted too, just in case.
+// Same type as patch_make's result, which is what patch_apply accepts in @types/diff-match-patch.
+type Patches = ReturnType<diff_match_patch['patch_make']>;
+
+function parseTextPatch(dmp: diff_match_patch, patchText: string): Patches {
+	if (patchText.startsWith('@@')) return dmp.patch_fromText(patchText);
+	const parsed = JSON.parse(patchText);
+	if (!Array.isArray(parsed)) throw new Error(`Unexpected patch format: ${patchText.slice(0, 40)}`);
+	// patch_apply deep-copies the patches into real patch_obj instances,
+	// so plain objects parsed from JSON can be passed as they are.
+	return parsed;
+}
+
 function applyTextPatch(dmp: diff_match_patch, text: string, patchText: string): PatchOutcome {
 	if (!patchText) return { text, ok: true };
-	const patches = dmp.patch_fromText(patchText);
+	const patches = parseTextPatch(dmp, patchText);
+	if (!patches.length) return { text, ok: true };
 	const [patched, flags] = dmp.patch_apply(patches, text);
 	return { text: patched, ok: flags.every(Boolean) };
 }
