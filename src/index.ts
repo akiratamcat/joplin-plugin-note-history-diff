@@ -1,13 +1,24 @@
 import joplin from 'api';
 import { MenuItemLocation, ToolbarButtonLocation } from 'api/types';
 import { lineDiff } from './lineDiff';
-import { renderHtml, renderMessage, renderSummary, DiffSection, VerificationResult } from './report';
+import {
+	renderCompareHtml,
+	renderCompareSummary,
+	renderHtml,
+	renderMessage,
+	renderSummary,
+	CompareResult,
+	DiffSection,
+	VerificationResult,
+} from './report';
+import { runSyntheticBenchmark } from './synthetic';
 import {
 	fetchAllRevisions,
 	probeFilteredFetch,
 	readRevisionSettings,
 	rebuildRevisions,
 	sortRevisions,
+	RevisionRow,
 } from './revisions';
 
 // Prototype for the verification plan in docs/spec.md (section 7).
@@ -15,6 +26,10 @@ import {
 
 const COMMAND_NAME = 'noteHistoryDiff.runVerification';
 const CLOSE_COMMAND_NAME = 'noteHistoryDiff.closePanel';
+const COMPARE_COMMAND_NAME = 'noteHistoryDiff.compareTestNotes';
+const TEST_NOTE_BEFORE = 'NHD-test-before';
+const TEST_NOTE_AFTER = 'NHD-test-after';
+const TOP_NOTES = 10;
 const NOTE_ITEM_TYPE = 1;
 
 let panelWidth: number | null = null;
@@ -27,6 +42,61 @@ async function joplinVersion(): Promise<string> {
 	} catch (error) {
 		return 'unknown';
 	}
+}
+
+// Counts revisions per note and returns the notes with the most revisions.
+async function topNotesByRevisionCount(all: RevisionRow[]): Promise<VerificationResult['topNotes']> {
+	const counts = new Map<string, number>();
+	for (const r of all) {
+		if (r.item_type !== NOTE_ITEM_TYPE) continue;
+		counts.set(r.item_id, (counts.get(r.item_id) || 0) + 1);
+	}
+	const top = Array.from(counts.entries()).sort((a, b) => b[1] - a[1]).slice(0, TOP_NOTES);
+	const output: VerificationResult['topNotes'] = [];
+	for (const [noteId, count] of top) {
+		let title = '(deleted note)';
+		try {
+			const note = await joplin.data.get(['notes', noteId], { fields: ['title'] });
+			title = note.title;
+		} catch (error) {
+			// The note may have been deleted while its revisions remain.
+		}
+		output.push({ noteId, title, count });
+	}
+	return output;
+}
+
+// Finds a note by its exact title by listing all notes (titles only).
+async function findNoteByTitle(title: string): Promise<{ id: string; title: string; body: string } | null> {
+	let page = 1;
+	for (;;) {
+		const result = await joplin.data.get(['notes'], { fields: ['id', 'title'], limit: 100, page });
+		const found = (result.items as { id: string; title: string }[]).find(n => n.title === title);
+		if (found) return await joplin.data.get(['notes', found.id], { fields: ['id', 'title', 'body'] });
+		if (!result.has_more) return null;
+		page++;
+	}
+}
+
+function countLines(text: string): number {
+	return text ? text.split('\n').length : 0;
+}
+
+// Compares the two test notes (large body, width switching) and runs the synthetic history benchmark (R3).
+async function compareTestNotes(): Promise<CompareResult | string> {
+	const before = await findNoteByTitle(TEST_NOTE_BEFORE);
+	const after = await findNoteByTitle(TEST_NOTE_AFTER);
+	if (!before || !after) {
+		return `Create two notes titled “${TEST_NOTE_BEFORE}” and “${TEST_NOTE_AFTER}” first (see docs/prototype.md).`;
+	}
+	return {
+		ranAt: Date.now(),
+		joplinVersion: await joplinVersion(),
+		before: { title: before.title, lines: countLines(before.body), chars: before.body.length },
+		after: { title: after.title, lines: countLines(after.body), chars: after.body.length },
+		diff: { label: `${TEST_NOTE_BEFORE} → ${TEST_NOTE_AFTER}`, result: lineDiff(before.body, after.body) },
+		synthetic: runSyntheticBenchmark(before.body, 100),
+	};
 }
 
 async function verify(noteId: string): Promise<VerificationResult> {
@@ -54,6 +124,7 @@ async function verify(noteId: string): Promise<VerificationResult> {
 	}
 
 	return {
+		topNotes: await topNotesByRevisionCount(fullScan.all),
 		ranAt: Date.now(),
 		joplinVersion: await joplinVersion(),
 		settings: await readRevisionSettings(),
@@ -123,6 +194,29 @@ joplin.plugins.register({
 		});
 
 		await joplin.commands.register({
+			name: COMPARE_COMMAND_NAME,
+			label: 'Note History Diff: compare test notes',
+			execute: async () => {
+				await joplin.views.panels.show(panel, true);
+				await joplin.views.panels.setHtml(panel, renderMessage('Comparing test notes…'));
+				try {
+					const result = await compareTestNotes();
+					if (typeof result === 'string') {
+						await joplin.views.panels.setHtml(panel, renderMessage(result));
+						return;
+					}
+					lastSummary = renderCompareSummary(result, panelWidth);
+					console.info(lastSummary);
+					await joplin.views.panels.setHtml(panel, renderCompareHtml(result, panelWidth === null ? 'unknown' : `${panelWidth}px`));
+				} catch (error) {
+					console.error('Note History Diff comparison failed', error);
+					const text = String(error && error.message ? error.message : error);
+					await joplin.views.panels.setHtml(panel, renderMessage(`<strong>Comparison failed:</strong> ${text.replace(/</g, '&lt;')}`));
+				}
+			},
+		});
+
+		await joplin.commands.register({
 			name: CLOSE_COMMAND_NAME,
 			label: 'Note History Diff: close panel',
 			execute: async () => {
@@ -131,6 +225,7 @@ joplin.plugins.register({
 		});
 
 		await joplin.views.menuItems.create('noteHistoryDiff.menu', COMMAND_NAME, MenuItemLocation.Tools);
+		await joplin.views.menuItems.create('noteHistoryDiff.compareMenu', COMPARE_COMMAND_NAME, MenuItemLocation.Tools);
 		await joplin.views.menuItems.create('noteHistoryDiff.closeMenu', CLOSE_COMMAND_NAME, MenuItemLocation.Tools);
 		await joplin.views.toolbarButtons.create('noteHistoryDiff.toolbar', COMMAND_NAME, ToolbarButtonLocation.NoteToolbar);
 	},

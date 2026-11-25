@@ -82,3 +82,63 @@
 	font-style: italic;
 	background-color: rgba(128, 128, 128, 0.08);
 }
+
+/* Side-by-side view (F3). Shown when the panel is at least 600px wide. */
+.nhd .sbs-row {
+	display: grid;
+	grid-template-columns: 3.5em minmax(0, 1fr) 3.5em minmax(0, 1fr);
+}
+
+.nhd .sbs .no {
+	text-align: right;
+	padding: 0 6px;
+	opacity: 0.5;
+	user-select: none;
+}
+
+.nhd .sbs .cell {
+	white-space: pre-wrap;
+	word-break: break-word;
+	padding: 0 6px;
+	border-left: 1px solid var(--joplin-divider-color, #ddd);
+}
+
+.nhd .sbs .cell.insert {
+	background-color: rgba(46, 160, 67, 0.18);
+}
+
+.nhd .sbs .cell.delete {
+	background-color: rgba(248, 81, 73, 0.18);
+}
+
+.nhd .sbs .cell.empty {
+	background-color: rgba(128, 128, 128, 0.08);
+}
+
+.nhd .layout-label {
+	margin-left: 8px;
+	font-size: 0.85em;
+	opacity: 0.7;
+}
+
+.nhd .view-unified,
+.nhd .layout-unified {
+	display: none;
+}
+
+/* Narrow panel: switch to the unified (one column) view. */
+@media (max-width: 599px) {
+	.nhd .view-sbs,
+	.nhd .layout-sbs {
+		display: none;
+	}
+
+	.nhd .view-unified,
+	.nhd .layout-unified {
+		display: block;
+	}
+
+	.nhd .layout-unified {
+		display: inline;
+	}
+}
