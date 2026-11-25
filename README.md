@@ -34,7 +34,7 @@ The plugin archive is written to `publish/`. See [GENERATOR_DOC.md](GENERATOR_DO
 npm test
 ```
 
-Unit tests (Jest) cover the code that does not depend on the Joplin API: `src/history` (reading, indexing and rebuilding revisions) and `src/diff`.
+Unit tests (Jest) cover the code that does not depend on the Joplin API: `src/history`, `src/diff`, `src/core` and `src/ui`.
 
 ## Source layout
 
