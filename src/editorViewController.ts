@@ -9,10 +9,12 @@ import { PanelState, renderPanel } from './ui/panelView';
 // Shows the note history diff in the editor area (where the note editor is),
 // like Joplin's own "Note history" view, using the editor plugin API.
 //
-// An editor plugin should only be active when relevant: only one editor view
-// can be active at a time. So the view is active only for the note the user
-// asked to see the history of (`historyNoteId`), and closing it switches back
-// to the normal editor.
+// Joplin re-runs the editor activation check only when the note changes (or a
+// note lock / the set of editor views changes), never on demand for the same
+// note, and `showEditorPlugin` can only show an editor that is already active
+// (confirmed in v0.3.0). So the view answers "active" for every note and
+// stays hidden until the user asks for the history; "Close" and leaving the
+// note switch back to the normal editor with `toggleEditorPlugin`.
 
 export const SHOW_DIFF_COMMAND = 'noteHistoryDiff.showDiff';
 export const EDITOR_STATUS_COMMAND = 'noteHistoryDiff.editorViewStatus';
@@ -112,8 +114,8 @@ export async function registerHistoryEditorView(): Promise<void> {
 		}
 	};
 
-	const close = async () => {
-		note('close requested');
+	const close = async (why: string) => {
+		note(`close (${why})`);
 		historyNoteId = null;
 		if (await isVisible()) {
 			await joplin.commands.execute('toggleEditorPlugin');
@@ -130,17 +132,25 @@ export async function registerHistoryEditorView(): Promise<void> {
 			await joplin.views.editors.addScript(handle, './ui/webview/panel.js');
 			await joplin.views.editors.onMessage(handle, async (message: any) => {
 				if (!message) return null;
-				if (message.type === 'close') await close();
+				if (message.type === 'close') await close('close button');
 				if (message.type === 'refresh' && historyNoteId) await refresh(historyNoteId, { reloadHistory: true });
 				return null;
 			});
+			// Called when the selected note changes or when the view becomes visible.
 			await joplin.views.editors.onUpdate(handle, async event => {
-				note(`onUpdate note=${event.noteId === historyNoteId ? 'history note' : 'other'}`);
+				const visible = await isVisible();
+				note(`onUpdate visible=${visible} note=${event.noteId === historyNoteId ? 'history note' : 'other'}`);
+				if (!visible) return;
+				if (!historyNoteId) {
+					// Shown by Joplin's own "toggle editor" button: show this note's history.
+					note('shown by the toggle editor button');
+					historyNoteId = event.noteId;
+				}
 				if (event.noteId === historyNoteId) await refresh(event.noteId);
 			});
 		},
 		onActivationCheck: async event => {
-			const active = !!event.noteId && event.noteId === historyNoteId;
+			const active = !!event.noteId;
 			note(`onActivationCheck → ${active}`);
 			return active;
 		},
@@ -149,10 +159,7 @@ export async function registerHistoryEditorView(): Promise<void> {
 	// Leaving the note ends the history view, like Joplin's own history viewer.
 	await joplin.workspace.onNoteSelectionChange(async (event: any) => {
 		const selected = event && event.value && event.value.length ? event.value[0] : null;
-		if (historyNoteId && selected !== historyNoteId) {
-			note('note changed: history view ends');
-			historyNoteId = null;
-		}
+		if (historyNoteId && selected !== historyNoteId) await close('note changed');
 	});
 
 	await joplin.commands.register({
@@ -164,20 +171,10 @@ export async function registerHistoryEditorView(): Promise<void> {
 			if (!selected) return;
 			historyNoteId = selected.id;
 			note('show requested');
-
-			// Path 1: ask Joplin to show the editor plugin.
-			await joplin.commands.execute('showEditorPlugin');
-			await wait(300);
-			if (await isVisible()) {
-				note('shown by showEditorPlugin');
-			} else {
-				// Path 2: activation is checked when a note is opened, so re-open the note, then show again.
-				note('not visible after showEditorPlugin: re-opening the note');
-				await joplin.commands.execute('openNote', selected.id);
-				await wait(300);
+			if (!(await isVisible())) {
 				await joplin.commands.execute('showEditorPlugin');
 				await wait(300);
-				note(`after re-open + showEditorPlugin: visible=${await isVisible()}`);
+				note(`after showEditorPlugin: visible=${await isVisible()}`);
 			}
 			await refresh(selected.id, { reloadHistory: true });
 		},
