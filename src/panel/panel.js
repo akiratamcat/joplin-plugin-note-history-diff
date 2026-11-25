@@ -17,7 +17,12 @@
 
 	document.addEventListener('click', async function(event) {
 		const target = event.target;
-		if (!target || target.id !== 'nhd-copy') return;
+		if (!target) return;
+		if (target.id === 'nhd-close') {
+			webviewApi.postMessage({ type: 'close' });
+			return;
+		}
+		if (target.id !== 'nhd-copy') return;
 		const answer = await webviewApi.postMessage({ type: 'copy' });
 		target.textContent = answer === 'copied' ? 'Copied' : 'Copy failed';
 		setTimeout(function() { target.textContent = 'Copy summary'; }, 1500);

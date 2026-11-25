@@ -89,6 +89,23 @@ function renderDiff(section: DiffSection): string {
 		<div class="diff">${body}</div>`;
 }
 
+// Header shown on every panel page, so the panel can always be closed.
+function toolbar(withCopy: boolean): string {
+	return `
+		<div class="toolbar">
+			<strong>Note History Diff · verification</strong>
+			<span class="buttons">
+				${withCopy ? '<button id="nhd-copy">Copy summary</button>' : ''}
+				<button id="nhd-close" title="Close this panel">Close</button>
+			</span>
+		</div>`;
+}
+
+// A simple panel page with a message (start, running, errors).
+export function renderMessage(messageHtml: string): string {
+	return `<div class="nhd">${toolbar(false)}<p>${messageHtml}</p></div>`;
+}
+
 export function renderHtml(result: VerificationResult, panelWidthNote: string): string {
 	const settingsRows = Object.keys(result.settings).map(key => {
 		const entry = result.settings[key];
@@ -112,10 +129,7 @@ export function renderHtml(result: VerificationResult, panelWidthNote: string): 
 
 	return `
 	<div class="nhd">
-		<div class="toolbar">
-			<strong>Note History Diff · verification</strong>
-			<button id="nhd-copy">Copy summary</button>
-		</div>
+		${toolbar(true)}
 		<p class="meta">Ran at ${formatTime(result.ranAt)} · Joplin ${escapeHtml(result.joplinVersion)} · panel width <span id="nhd-width">${escapeHtml(panelWidthNote)}</span></p>
 		<p class="meta">The summary copied by the button contains counts and timings only, never note text.</p>
 
