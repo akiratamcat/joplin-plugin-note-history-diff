@@ -1,4 +1,5 @@
-import { DiffLine, LineDiffResult } from '../diff/lineDiff';
+import { LineDiffResult } from '../diff/lineDiff';
+import { escapeHtml, renderDiffViews } from '../ui/diffView';
 import { ProbeResult, RebuiltRevision, RevisionSettings } from './verifyRevisions';
 
 export interface DiffSection {
@@ -41,16 +42,6 @@ export interface CompareResult {
 	synthetic: SyntheticBenchmark;
 }
 
-const CONTEXT_LINES = 3;
-
-function escapeHtml(text: string): string {
-	return text
-		.replace(/&/g, '&amp;')
-		.replace(/</g, '&lt;')
-		.replace(/>/g, '&gt;')
-		.replace(/"/g, '&quot;');
-}
-
 function formatTime(ms: number): string {
 	return ms ? new Date(ms).toLocaleString() : '-';
 }
@@ -67,119 +58,13 @@ function probeVerdict(probe: ProbeResult, expected: number): string {
 	return 'inconclusive';
 }
 
-interface Fold {
-	fold: true;
-	count: number;
-}
-
-// Collapses long runs of unchanged items, keeping a few items of context.
-function foldRuns<T>(items: T[], isEqual: (item: T) => boolean): (T | Fold)[] {
-	const output: (T | Fold)[] = [];
-	let index = 0;
-	while (index < items.length) {
-		if (!isEqual(items[index])) {
-			output.push(items[index]);
-			index++;
-			continue;
-		}
-		let end = index;
-		while (end < items.length && isEqual(items[end])) end++;
-		const run = items.slice(index, end);
-		const keepHead = index === 0 ? 0 : CONTEXT_LINES;
-		const keepTail = end === items.length ? 0 : CONTEXT_LINES;
-		if (run.length > keepHead + keepTail + 1) {
-			output.push(...run.slice(0, keepHead));
-			output.push({ fold: true, count: run.length - keepHead - keepTail });
-			output.push(...run.slice(run.length - keepTail));
-		} else {
-			output.push(...run);
-		}
-		index = end;
-	}
-	return output;
-}
-
-function isFold(item: any): item is Fold {
-	return !!item && item.fold === true;
-}
-
-function foldHtml(count: number): string {
-	return `<div class="fold">… ${count} unchanged lines …</div>`;
-}
-
-function cellText(text: string): string {
-	return escapeHtml(text) || '&nbsp;';
-}
-
-// One column: every line with a +/− sign.
-function renderUnified(lines: DiffLine[]): string {
-	return foldRuns(lines, l => l.kind === 'equal').map(line => {
-		if (isFold(line)) return foldHtml(line.count);
-		const sign = line.kind === 'insert' ? '+' : line.kind === 'delete' ? '−' : ' ';
-		return `<div class="line ${line.kind}"><span class="sign">${sign}</span>${cellText(line.text)}</div>`;
-	}).join('');
-}
-
-interface SideRow {
-	left: { no: number; text: string } | null;
-	right: { no: number; text: string } | null;
-	kind: 'equal' | 'change';
-}
-
-// Pairs deleted lines (left) with inserted lines (right) for the side-by-side view.
-function toSideRows(lines: DiffLine[]): SideRow[] {
-	const rows: SideRow[] = [];
-	let leftNo = 0;
-	let rightNo = 0;
-	let index = 0;
-	while (index < lines.length) {
-		if (lines[index].kind === 'equal') {
-			leftNo++;
-			rightNo++;
-			rows.push({ left: { no: leftNo, text: lines[index].text }, right: { no: rightNo, text: lines[index].text }, kind: 'equal' });
-			index++;
-			continue;
-		}
-		const deleted: string[] = [];
-		const inserted: string[] = [];
-		while (index < lines.length && lines[index].kind !== 'equal') {
-			if (lines[index].kind === 'delete') deleted.push(lines[index].text);
-			else inserted.push(lines[index].text);
-			index++;
-		}
-		for (let i = 0; i < Math.max(deleted.length, inserted.length); i++) {
-			rows.push({
-				left: i < deleted.length ? { no: ++leftNo, text: deleted[i] } : null,
-				right: i < inserted.length ? { no: ++rightNo, text: inserted[i] } : null,
-				kind: 'change',
-			});
-		}
-	}
-	return rows;
-}
-
-function sideCell(cell: SideRow['left'], changeClass: string): string {
-	if (!cell) return '<div class="no"></div><div class="cell empty"></div>';
-	return `<div class="no">${cell.no}</div><div class="cell ${changeClass}">${cellText(cell.text)}</div>`;
-}
-
-// Two columns: before on the left, after on the right.
-function renderSideBySide(lines: DiffLine[]): string {
-	const rows = foldRuns(toSideRows(lines), r => r.kind === 'equal').map(row => {
-		if (isFold(row)) return `<div class="sbs-fold">${foldHtml(row.count)}</div>`;
-		const changed = row.kind === 'change';
-		return `<div class="sbs-row">${sideCell(row.left, changed ? 'delete' : '')}${sideCell(row.right, changed ? 'insert' : '')}</div>`;
-	});
-	return `<div class="sbs">${rows.join('')}</div>`;
-}
-
 // Both layouts are rendered; CSS shows side-by-side when the panel is at
 // least 600px wide and the unified view below that (F3).
 export function renderDiff(section: DiffSection): string {
 	const { result } = section;
 	const hasChanges = result.lines.some(l => l.kind !== 'equal');
 	const body = hasChanges
-		? `<div class="view-sbs">${renderSideBySide(result.lines)}</div><div class="view-unified">${renderUnified(result.lines)}</div>`
+		? renderDiffViews(result.lines, { foldedLines: n => `… ${n} unchanged lines …` })
 		: '<div class="fold">No changes</div>';
 	return `
 		<h3>${escapeHtml(section.label)}</h3>

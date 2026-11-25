@@ -22,10 +22,10 @@ npm run dist
 ## 使い方
 
 1. 履歴が 2 件以上あるノートを開く
-2. メニュー「ツール」→「Note History Diff: run verification」、またはノートのツールバーのボタンを押す
+2. メニュー「ツール」→「[dev] Note History Diff: run verification」を選ぶ（v0.2.0 からツールバーのボタンは製品用の機能に変わった）
 3. エディタの横のパネルに結果が出る
 4. 「Copy summary」で結果の要約をクリップボードにコピーできる。要約には件数・文字数・時間だけが入り、ノートの本文やタイトルは入らない
-5. パネルを閉じるには、パネル右上の「Close」ボタンを押すか、メニュー「ツール」→「Note History Diff: close panel」を選ぶ（v0.1.1 から）
+5. パネルを閉じるには、パネル右上の「Close」ボタンを押すか、メニュー「ツール」→「[dev] Note History Diff: close verification panel」を選ぶ（v0.1.1 から）
 
 ## パネルで確かめること
 
@@ -59,7 +59,7 @@ npm run dist
 ### 手順
 
 1. Joplin で「ファイル」→「インポート」→「MD - Markdown (File)」を選び、`NHD-test-before.md` と `NHD-test-after.md` を取り込む。ノートのタイトルが `NHD-test-before` と `NHD-test-after` になっていることを確かめる
-2. メニュー「ツール」→「Note History Diff: compare test notes」を選ぶ
+2. メニュー「ツール」→「[dev] Note History Diff: compare test notes」を選ぶ
 3. パネルに次の 3 つが出る
     - テスト用ノートの行数と文字数
     - 100 版の模擬履歴を組み立てた時間（R3）。版が 100 件あるノートがなくても、組み立ての速さを確かめられる

@@ -23,6 +23,15 @@ describe('lineDiff', () => {
 		expect(result.lines.every(l => l.kind === 'equal')).toBe(true);
 	});
 
+	test('appending to a note without a final newline does not mark the last line as changed', () => {
+		const result = lineDiff('a\nb', 'a\nb\nc');
+		expect(result.lines).toEqual([
+			{ kind: 'equal', text: 'a' },
+			{ kind: 'equal', text: 'b' },
+			{ kind: 'insert', text: 'c' },
+		]);
+	});
+
 	test('handles empty texts', () => {
 		expect(lineDiff('', 'x\ny').added).toBe(2);
 		expect(lineDiff('x\ny', '').removed).toBe(2);

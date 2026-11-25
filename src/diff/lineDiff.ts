@@ -27,13 +27,20 @@ function splitLines(text: string): string[] {
 	return lines;
 }
 
+// Notes often have no newline after the last line. In line mode "abc" and
+// "abc\n" are different lines, so appending a line would show the unchanged
+// last line as deleted and re-added. Compare both texts with a final newline.
+function withFinalNewline(text: string): string {
+	return text === '' || text.endsWith('\n') ? text : `${text}\n`;
+}
+
 // Line-mode diff: each line is mapped to one character, diffed, then mapped back.
 export function lineDiff(before: string, after: string, timeoutSeconds = 1): LineDiffResult {
 	const dmp = new diff_match_patch();
 	dmp.Diff_Timeout = timeoutSeconds;
 
 	const started = Date.now();
-	const { chars1, chars2, lineArray } = dmp.diff_linesToChars_(before, after);
+	const { chars1, chars2, lineArray } = dmp.diff_linesToChars_(withFinalNewline(before), withFinalNewline(after));
 	const diffs = dmp.diff_main(chars1, chars2, false);
 	dmp.diff_charsToLines_(diffs, lineArray);
 	const elapsedMs = Date.now() - started;
