@@ -212,12 +212,12 @@ npm に公開した時点で一覧に載るため、v1 より前の試用版は 
 
 ### 公開の条件（チェックリスト）
 
-- [ ] npm アカウントを作り、`npm login` する
-- [ ] `package.json` の `name` が `joplin-plugin-` で始まる（予定：`joplin-plugin-note-history-diff`。npm でこの名前が空いているか確かめる）
+- [ ] npm アカウント（[akiratamcat](https://www.npmjs.com/~akiratamcat)）で `npm login` する
+- [ ] `package.json` の `name` が `joplin-plugin-` で始まる（名前：`joplin-plugin-note-history-diff`。2026-11-25 時点で npm では未使用）
 - [ ] `package.json` の `keywords` に `joplin-plugin` を含む
 - [ ] `npm run dist` で `publish/` に `.jpl` と `.json` ができている
 - [ ] `manifest.json` の必須項目（`manifest_version`、`name`、`version`、`app_min_version`）を埋める。`version` は `1.0.0` にし、`npm run updateVersion` で `package.json` とそろえる
-- [ ] GitHub の公開リポジトリに push し、`repository_url` と `homepage_url` をそこに向ける。スクリーンショットを相対パスで載せるには、どちらかが GitHub を指している必要がある
+- [ ] GitHub の公開リポジトリ（予定：`https://github.com/akiratamcat/joplin-plugin-note-history-diff`）に push し、`repository_url` と `homepage_url` をそこに向ける。スクリーンショットを相対パスで載せるには、どちらかが GitHub を指している必要がある
 - [ ] `README.md` と `LICENSE`（MIT）を置く
 - [ ] 公開後、npm のキーワード検索、公式プラグイン一覧、Joplin 本体の検索の 3 か所で見つかることを確かめる
 
@@ -227,7 +227,7 @@ npm に公開した時点で一覧に載るため、v1 より前の試用版は 
 
 | 項目 | 設定する値（案） | 使われ方 |
 | --- | --- | --- |
-| `id` | `io.github.<GitHub ユーザー名>.note-history-diff` | プラグインを見分ける ID。公開後は変えない（推測：公式リポジトリのフォルダ名にも使われている） |
+| `id` | `io.github.akiratamcat.note-history-diff` | プラグインを見分ける ID。公開後は変えない（推測：公式リポジトリのフォルダ名にも使われている） |
 | `name` | Note History Diff | 画面に表示される名前 |
 | `description` | 英語の 1 文（例：Compare two revisions of a note and see what changed.） | 一覧と検索結果に表示される |
 | `keywords` | history, revision, diff, compare, version | 検索に使われる |
