@@ -208,13 +208,13 @@ v1 は、公式プラグイン一覧（[joplinapp.org/plugins](https://joplinapp
 2. 公式リポジトリのスクリプトが条件に合うパッケージを取り込む。リポジトリは 30 分ごとに更新される（[joplin/plugins](https://github.com/joplin/plugins)）
 3. Joplin 本体はこのリポジトリから一覧を読み込み、検索・インストール・更新に使う（[公式リポジトリ開設の告知](https://discourse.joplinapp.org/t/official-joplin-plugin-repository-is-now-ready-if-you-are-developing-a-plugin-please-read-on/13635)）
 
-npm に公開した時点で一覧に載るため、v1 より前の試用版は npm には出しません。`.jpl` ファイルを GitHub Releases などで配り、手動でインストールしてもらいます。
+npm に公開した時点で一覧に載るため、v1 より前の試用版は npm には出しません。`.jpl` ファイルを GitHub Releases などで配り、手動でインストールしてもらいます。うっかり公開しないように、v1 までは `package.json` に `"private": true` を入れておきます（この状態だと `npm publish` は失敗する）。
 
 ### 公開の条件（チェックリスト）
 
 - [ ] npm アカウント（[akiratamcat](https://www.npmjs.com/~akiratamcat)）で `npm login` する
 - [ ] `package.json` の `name` が `joplin-plugin-` で始まる（名前：`joplin-plugin-note-history-diff`。2026-11-25 時点で npm では未使用）
-- [ ] `package.json` の `keywords` に `joplin-plugin` を含む
+- [ ] `package.json` の `keywords` に `joplin-plugin` を含む。`"private": true` を外してある
 - [ ] `npm run dist` で `publish/` に `.jpl` と `.json` ができている
 - [ ] `manifest.json` の必須項目（`manifest_version`、`name`、`version`、`app_min_version`）を埋める。`version` は `1.0.0` にし、`npm run updateVersion` で `package.json` とそろえる
 - [ ] GitHub の公開リポジトリ（予定：`https://github.com/akiratamcat/joplin-plugin-note-history-diff`）に push し、`repository_url` と `homepage_url` をそこに向ける。スクリーンショットを相対パスで載せるには、どちらかが GitHub を指している必要がある
