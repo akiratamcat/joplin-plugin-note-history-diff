@@ -1,6 +1,6 @@
 import joplin from 'api';
 import { MenuItemLocation, ToolbarButtonLocation } from 'api/types';
-import { lineDiff } from './lineDiff';
+import { lineDiff } from './diff/lineDiff';
 import {
 	renderCompareHtml,
 	renderCompareSummary,
@@ -10,16 +10,16 @@ import {
 	CompareResult,
 	DiffSection,
 	VerificationResult,
-} from './report';
-import { runSyntheticBenchmark } from './synthetic';
+} from './dev/report';
+import { runSyntheticBenchmark } from './dev/synthetic';
 import {
 	fetchAllRevisions,
 	probeFilteredFetch,
 	readRevisionSettings,
 	rebuildRevisions,
-	sortRevisions,
-	RevisionRow,
-} from './revisions';
+} from './dev/verifyRevisions';
+import { sortRevisions } from './history/revisionRepository';
+import { RevisionRow } from './history/types';
 
 // Prototype for the verification plan in docs/spec.md (section 7).
 // It only reads data: it never writes notes or revisions.

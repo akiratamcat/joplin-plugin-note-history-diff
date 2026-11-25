@@ -1,6 +1,8 @@
-import diff_match_patch = require('diff-match-patch');
+import { makeTextPatch } from '../history/patch';
+import { RevisionCache } from '../history/revisionCache';
+import { RevisionRebuilder } from '../history/revisionRebuilder';
+import { RevisionRow } from '../history/types';
 import { SyntheticBenchmark } from './report';
-import { rebuildRevisions, RevisionRow } from './revisions';
 
 // Small deterministic PRNG so every run produces the same history.
 function prng(seed: number): () => number {
@@ -25,9 +27,9 @@ function mutate(text: string, random: () => number, step: number): string {
 }
 
 // Builds a history of `count` revisions in memory, stored as JSON patches
-// like Joplin does, then rebuilds it with the same code as the real history (R3).
+// like Joplin does, then rebuilds the newest one with the product rebuilder
+// from an empty cache: the worst case, replaying the whole chain (R3).
 export function runSyntheticBenchmark(baseText: string, count = 100): SyntheticBenchmark {
-	const dmp = new diff_match_patch();
 	const random = prng(42);
 
 	const makeStarted = Date.now();
@@ -47,7 +49,7 @@ export function runSyntheticBenchmark(baseText: string, count = 100): SyntheticB
 			created_time: i,
 			updated_time: i,
 			title_diff: '[]',
-			body_diff: JSON.stringify(dmp.patch_make(previous, current)),
+			body_diff: makeTextPatch(previous, current),
 			metadata_diff: '',
 			encryption_applied: 0,
 		});
@@ -56,8 +58,16 @@ export function runSyntheticBenchmark(baseText: string, count = 100): SyntheticB
 	}
 	const makeMs = Date.now() - makeStarted;
 
+	const cache = new RevisionCache(5_000_000);
+	const rebuilder = new RevisionRebuilder(revisions, cache, 10);
 	const rebuildStarted = Date.now();
-	const rebuilt = rebuildRevisions(revisions);
+	let allOk = true;
+	let finalMatches = false;
+	try {
+		finalMatches = rebuilder.versionAt(count - 1).body === current;
+	} catch (error) {
+		allOk = false;
+	}
 	const rebuildMs = Date.now() - rebuildStarted;
 
 	return {
@@ -65,8 +75,8 @@ export function runSyntheticBenchmark(baseText: string, count = 100): SyntheticB
 		finalChars: current.length,
 		makeMs,
 		rebuildMs,
-		allOk: rebuilt.every(r => r.ok),
-		finalMatches: rebuilt.length > 0 && rebuilt[rebuilt.length - 1].body === current,
-		heldChars: rebuilt.reduce((sum, r) => sum + r.body.length, 0),
+		allOk,
+		finalMatches,
+		heldChars: cache.totalChars,
 	};
 }

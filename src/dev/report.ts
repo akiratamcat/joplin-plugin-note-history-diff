@@ -1,5 +1,5 @@
-import { DiffLine, LineDiffResult } from './lineDiff';
-import { ProbeResult, RebuiltRevision, RevisionSettings } from './revisions';
+import { DiffLine, LineDiffResult } from '../diff/lineDiff';
+import { ProbeResult, RebuiltRevision, RevisionSettings } from './verifyRevisions';
 
 export interface DiffSection {
 	label: string;
@@ -302,13 +302,13 @@ export function renderCompareHtml(result: CompareResult, panelWidthNote: string)
 		</table>
 
 		<h2>2. Synthetic history (R3)</h2>
-		<p>Built ${s.revisions} revisions in memory from the “before” note (each with a few random edits, stored as JSON patches like Joplin does), then rebuilt them.</p>
+		<p>Built ${s.revisions} revisions in memory from the “before” note (each with a few random edits, stored as JSON patches like Joplin does), then rebuilt the newest one from an empty cache with the product rebuilder (worst case: the whole chain is replayed, checkpoints every 10 revisions).</p>
 		<table>
 			<tr><td>Make patches</td><td>${s.makeMs} ms</td></tr>
-			<tr><td>Rebuild all revisions</td><td>${s.rebuildMs} ms</td></tr>
-			<tr><td>All patches applied</td><td>${yesNo(s.allOk)}</td></tr>
+			<tr><td>Rebuild newest revision (full replay)</td><td>${s.rebuildMs} ms</td></tr>
+			<tr><td>No rebuild error</td><td>${yesNo(s.allOk)}</td></tr>
 			<tr><td>Last rebuilt revision matches</td><td>${yesNo(s.finalMatches)}</td></tr>
-			<tr><td>Characters held in memory</td><td>${s.heldChars}</td></tr>
+			<tr><td>Characters held in the cache (checkpoints)</td><td>${s.heldChars}</td></tr>
 		</table>
 
 		<h2>3. Diff: before → after</h2>
