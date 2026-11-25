@@ -21,6 +21,11 @@ export const EDITOR_STATUS_COMMAND = 'noteHistoryDiff.editorViewStatus';
 const VIEW_ID = 'historyDiffView';
 // An opening of the view this soon after a note change is Joplin re-opening it by itself.
 const AUTO_REOPEN_WINDOW_MS = 2000;
+// At startup Joplin re-opens a view left open right after setting it up. The
+// first opening is not always that, though: Joplin does not send updates to a
+// hidden view, so the user's first "toggle editor" press is also a first update
+// (v0.3.2 test). Only a first opening this soon after setup counts as automatic.
+const STARTUP_REOPEN_WINDOW_MS = 5000;
 
 async function globalSetting(key: string): Promise<any> {
 	try {
@@ -63,6 +68,7 @@ export async function registerHistoryEditorView(): Promise<void> {
 	// mistaken for the user pressing Joplin's "toggle editor" button.
 	let lastNoteChangeAt = 0;
 	let firstUpdateSeen = false;
+	let setupAt = 0;
 	// Diagnostics for the verification of the editor view behaviour.
 	const log: string[] = [];
 	const note = (line: string) => {
@@ -124,16 +130,23 @@ export async function registerHistoryEditorView(): Promise<void> {
 	const close = async (why: string) => {
 		note(`close (${why})`);
 		historyNoteId = null;
-		if (await isVisible()) {
+		generation++; // drop any diff still being computed
+		if (!(await isVisible())) return;
+		// Leave something readable behind in case switching back does not happen.
+		await render({ kind: 'loading' });
+		for (let attempt = 1; attempt <= 2; attempt++) {
 			await joplin.commands.execute('toggleEditorPlugin');
 			await wait(300);
-			note(`after toggleEditorPlugin: visible=${await isVisible()}`);
+			const stillVisible = await isVisible();
+			note(`after toggleEditorPlugin (attempt ${attempt}): visible=${stillVisible}`);
+			if (!stillVisible) return;
 		}
 	};
 
 	await joplin.views.editors.register(VIEW_ID, {
 		onSetup: async (handle: string) => {
 			viewHandle = handle;
+			setupAt = Date.now();
 			note('onSetup');
 			await joplin.views.editors.addScript(handle, './ui/webview/panel.css');
 			await joplin.views.editors.addScript(handle, './ui/webview/panel.js');
@@ -154,7 +167,7 @@ export async function registerHistoryEditorView(): Promise<void> {
 					await refresh(event.noteId);
 					return;
 				}
-				if (firstUpdate) {
+				if (firstUpdate && Date.now() - setupAt < STARTUP_REOPEN_WINDOW_MS) {
 					await close('re-opened by Joplin at startup');
 					return;
 				}
