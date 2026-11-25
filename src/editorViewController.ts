@@ -19,6 +19,8 @@ import { PanelState, renderPanel } from './ui/panelView';
 export const SHOW_DIFF_COMMAND = 'noteHistoryDiff.showDiff';
 export const EDITOR_STATUS_COMMAND = 'noteHistoryDiff.editorViewStatus';
 const VIEW_ID = 'historyDiffView';
+// An opening of the view this soon after a note change is Joplin re-opening it by itself.
+const AUTO_REOPEN_WINDOW_MS = 2000;
 
 async function globalSetting(key: string): Promise<any> {
 	try {
@@ -56,6 +58,11 @@ export async function registerHistoryEditorView(): Promise<void> {
 	// The note whose history the user asked to see. The view is active only for it.
 	let historyNoteId: string | null = null;
 	let generation = 0;
+	// Joplin remembers that the view was open and re-opens it by itself after
+	// a note change or a restart (v0.3.1 test). Those openings must not be
+	// mistaken for the user pressing Joplin's "toggle editor" button.
+	let lastNoteChangeAt = 0;
+	let firstUpdateSeen = false;
 	// Diagnostics for the verification of the editor view behaviour.
 	const log: string[] = [];
 	const note = (line: string) => {
@@ -139,14 +146,26 @@ export async function registerHistoryEditorView(): Promise<void> {
 			// Called when the selected note changes or when the view becomes visible.
 			await joplin.views.editors.onUpdate(handle, async event => {
 				const visible = await isVisible();
+				const firstUpdate = !firstUpdateSeen;
+				firstUpdateSeen = true;
 				note(`onUpdate visible=${visible} note=${event.noteId === historyNoteId ? 'history note' : 'other'}`);
 				if (!visible) return;
-				if (!historyNoteId) {
-					// Shown by Joplin's own "toggle editor" button: show this note's history.
-					note('shown by the toggle editor button');
-					historyNoteId = event.noteId;
+				if (event.noteId === historyNoteId) {
+					await refresh(event.noteId);
+					return;
 				}
-				if (event.noteId === historyNoteId) await refresh(event.noteId);
+				if (firstUpdate) {
+					await close('re-opened by Joplin at startup');
+					return;
+				}
+				if (Date.now() - lastNoteChangeAt < AUTO_REOPEN_WINDOW_MS) {
+					await close('re-opened by Joplin after a note change');
+					return;
+				}
+				// Shown by Joplin's own "toggle editor" button: show this note's history.
+				note('shown by the toggle editor button');
+				historyNoteId = event.noteId;
+				await refresh(event.noteId);
 			});
 		},
 		onActivationCheck: async event => {
@@ -158,8 +177,9 @@ export async function registerHistoryEditorView(): Promise<void> {
 
 	// Leaving the note ends the history view, like Joplin's own history viewer.
 	await joplin.workspace.onNoteSelectionChange(async (event: any) => {
+		lastNoteChangeAt = Date.now();
 		const selected = event && event.value && event.value.length ? event.value[0] : null;
-		if (historyNoteId && selected !== historyNoteId) await close('note changed');
+		if (selected !== historyNoteId && (historyNoteId || (await isVisible()))) await close('note changed');
 	});
 
 	await joplin.commands.register({
