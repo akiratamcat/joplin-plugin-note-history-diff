@@ -19,7 +19,6 @@ import { ComparisonExplanation, DisplayMode, PanelState, renderPanel } from './u
 // note switch back to the normal editor with `toggleEditorPlugin`.
 
 export const SHOW_DIFF_COMMAND = 'noteHistoryDiff.showDiff';
-export const EDITOR_STATUS_COMMAND = 'noteHistoryDiff.editorViewStatus';
 const VIEW_ID = 'historyDiffView';
 // An opening of the view this soon after a note change is Joplin re-opening it by itself.
 const AUTO_REOPEN_WINDOW_MS = 2000;
@@ -130,13 +129,10 @@ export async function registerHistoryEditorView(): Promise<void> {
 	let firstShownSeen = false;
 	let closing = false;
 	let setupAt = 0;
-	let otherViews = 0;
-	// Diagnostics for the verification of the editor view behaviour.
-	const log: string[] = [];
+	// How the view is opened and closed, for the developer console. Joplin's
+	// editor view behaviour took many rounds to get right (docs/prototype.md).
 	const note = (line: string) => {
-		log.push(`${new Date().toLocaleTimeString()} ${line}`);
-		if (log.length > 30) log.shift();
-		console.info(`Note History Diff: ${line}`);
+		console.debug(`Note History Diff: ${line}`);
 	};
 
 	// Joplin's date and time formats (Options > General), read again on every
@@ -342,7 +338,6 @@ export async function registerHistoryEditorView(): Promise<void> {
 	await joplin.views.editors.register(VIEW_ID, {
 		onSetup: async (handle: string) => {
 			if (!isMainWindowHandle(handle)) {
-				otherViews++;
 				note('onSetup for another window: not used');
 				return;
 			}
@@ -416,33 +411,6 @@ export async function registerHistoryEditorView(): Promise<void> {
 		},
 	});
 
-	await joplin.commands.register({
-		name: EDITOR_STATUS_COMMAND,
-		label: '[dev] Note History Diff: editor view status',
-		execute: async () => {
-			let active: any = 'unknown';
-			try {
-				active = viewHandle ? await joplin.views.editors.isActive(viewHandle) : 'no view';
-			} catch (error) {
-				active = `error: ${errorMessage(error)}`;
-			}
-			const lines = [
-				'Note History Diff: editor view status',
-				`main window view: ${viewHandle ? 'set' : 'none'} (views of other windows: ${otherViews})`,
-				`active: ${active}`,
-				`visible: ${await isVisible()}`,
-				`history note set: ${historyNoteId ? 'yes' : 'no'}`,
-				`${SHOWN_EDITOR_VIEWS_SETTING}: ${JSON.stringify(await globalSetting(SHOWN_EDITOR_VIEWS_SETTING))} (at startup: ${JSON.stringify(shownAtStart)})`,
-				'',
-				'Recent events:',
-				...log,
-			];
-			await joplin.clipboard.writeText(lines.join('\n'));
-			await joplin.views.dialogs.showMessageBox(`${lines.join('\n')}\n\n(Copied to the clipboard.)`);
-		},
-	});
-
 	await joplin.views.menuItems.create('noteHistoryDiff.showDiffMenu', SHOW_DIFF_COMMAND, MenuItemLocation.Tools);
-	await joplin.views.menuItems.create('noteHistoryDiff.editorStatusMenu', EDITOR_STATUS_COMMAND, MenuItemLocation.Tools);
 	await joplin.views.toolbarButtons.create('noteHistoryDiff.showDiffButton', SHOW_DIFF_COMMAND, ToolbarButtonLocation.NoteToolbar);
 }
