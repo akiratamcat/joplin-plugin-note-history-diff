@@ -312,6 +312,28 @@ v0.3.5 では、「履歴ボタン →『閉じる』→ 切り替えボタン�
 - そのため、別のノートを開いたときに「表示したままノートを切り替えた」と判断していた。
 - その結果、ノートを開いてから 2 秒以内に切り替えボタンを押すと、Joplin が自動で開き直したものと取り違えて元のエディタへ戻していた。
 
+v0.3.5 で事象が再現したときの状態の記録（あとから採取）：
+
+```text
+plugins.shownEditorViewIds: [] (at startup: ["io.github.akiratamcat.note-history-diff-historyDiffView"])
+
+9:55:16 onSetup (left open at the last exit: true)
+9:55:20 onActivationCheck → true
+9:55:20 webview shown visible=true note=other
+9:55:20 close (re-opened by Joplin at startup)
+9:55:21 after toggleEditorPlugin (attempt 1): visible=false
+9:55:22 webview shown visible=true note=other
+9:55:22 shown by the toggle editor button
+9:55:27 close (note changed)
+9:55:27 onActivationCheck → true
+9:55:29 webview shown visible=true note=other
+9:55:29 close (re-opened by Joplin after a note change)
+9:55:29 onUpdate visible=false note=other (closing)
+9:55:29 after toggleEditorPlugin (attempt 1): visible=false
+```
+
+9:55:22 に切り替えボタンで履歴を表示し、切り替えボタンで隠した（記録なし）。9:55:27 に別のノートを開いたとき、ビューは隠れているのに「表示中のノート」が残っていたため閉じる処理が走り、9:55:29 の切り替えボタン（ノートを開いてから約 2 秒以内）を自動の開き直しと取り違えた。上の推定どおり。
+
 v0.3.6 での変更：
 
 - ビューが隠れたことも、ビューの中のスクリプトがプラグインへ知らせる（`hidden` メッセージ）。プラグインはそのとき「履歴を表示中のノート」を忘れる。
