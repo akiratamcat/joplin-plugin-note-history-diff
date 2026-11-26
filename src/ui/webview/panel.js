@@ -17,30 +17,40 @@
 	}
 
 	// Scrolls to the next or previous block of changes, leaving a few lines of
-	// context above it, and flashes it.
+	// context above it, and flashes it. Near the end (or the start) the view
+	// cannot scroll any further, so the block jumped to last is remembered:
+	// while it is on screen, the next press moves on from it even though the
+	// view does not move (v0.7.1 test).
 	const JUMP_MARGIN = 48;
+	let lastTarget = null;
 	function jump(direction) {
 		const scroller = document.querySelector('.nhd > .body');
 		const hunks = visibleHunks();
 		if (!scroller || !hunks.length) return;
 		const top = scroller.getBoundingClientRect().top;
 		const offset = function(hunk) { return hunk.getBoundingClientRect().top - top - JUMP_MARGIN; };
-		let target = null;
-		if (direction === 'next') {
-			target = hunks.find(function(hunk) { return offset(hunk) > 2; }) || null;
+		let index = -1;
+		const lastIndex = lastTarget ? hunks.indexOf(lastTarget) : -1;
+		const lastOnScreen = lastIndex >= 0 && offset(lastTarget) + JUMP_MARGIN >= 0 && offset(lastTarget) + JUMP_MARGIN < scroller.clientHeight;
+		if (lastOnScreen) {
+			index = direction === 'next' ? lastIndex + 1 : lastIndex - 1;
+		} else if (direction === 'next') {
+			index = hunks.findIndex(function(hunk) { return offset(hunk) > 2; });
 		} else {
 			for (let i = hunks.length - 1; i >= 0; i--) {
 				if (offset(hunks[i]) < -2) {
-					target = hunks[i];
+					index = i;
 					break;
 				}
 			}
 		}
-		if (!target) return;
+		if (index < 0 || index >= hunks.length) return;
+		const target = hunks[index];
 		scroller.scrollTop += offset(target);
 		target.classList.remove('jump-target');
 		void target.offsetWidth;
 		target.classList.add('jump-target');
+		lastTarget = target;
 	}
 
 	document.addEventListener('click', function(event) {
