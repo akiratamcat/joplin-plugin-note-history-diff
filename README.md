@@ -1,58 +1,65 @@
 # Note History Diff
 
-A Joplin plugin to compare two revisions of a note and see what changed.
+Compare two revisions of a Joplin note and see exactly what changed.
 
-> Status: in development (v0.7.0). Not published to the plugin repository yet.
+Joplin keeps a history of your notes, but its note history view shows one revision at a time. Note History Diff shows the differences between two revisions, or between a revision and the current note, side by side, in the editor area.
+
+<!-- Screenshot: added before the v1.0.0 release. -->
+
+## Features
+
+- **Compare any two versions**: pick the versions to compare in the **From** and **To** lists. They list every revision of the note (newest first, with its date and length) and the current note.
+- **Side by side or unified**: switch between the two layouts; your choice is remembered. Narrow views (under 600px) always use one column.
+- **Character highlight**: inside a changed line, the characters that changed are highlighted.
+- **Step through the history**: **Older pair** / **Newer pair** compare neighbouring revisions one step at a time.
+- **Jump between changes**: **Previous change** / **Next change** scroll to each block of changes. Unchanged lines are folded, keeping three lines of context.
+- **Ignore whitespace**: differences in trailing spaces and line endings are ignored by default (a checkbox turns this off).
+- **Title changes** are shown above the body.
+- **Read only**: the plugin never changes your notes or their history.
+- English and Japanese user interface. Dates follow your Joplin date and time formats.
 
 ## Usage
 
-Open a note, then click the history button in the note toolbar, or choose **Tools > Show note history diff**.
+1. Open a note.
+2. Click the history button in the note toolbar, or choose **Tools > Show note history diff**.
+3. The history diff replaces the note editor, like Joplin's own note history view.
+   - If you edited the note after its latest revision, the latest revision is compared with the current note.
+   - Otherwise, the latest revision is compared with the one before it.
+4. Click **Close**, or open another note, to return to the editor.
 
-The history diff replaces the note editor, like Joplin's own note history view, and shows what changed:
+Joplin's "Toggle editors" button in the note toolbar also switches between the editor and the history diff of the current note.
 
-- If the note was edited after its latest revision: latest revision → current note.
-- If not (the latest revision equals the note): previous revision → latest revision.
-- Pick other versions to compare in the **From** and **To** lists: every revision (newest first, with its date and length) and the current note.
-- Changed characters inside a changed line are highlighted. Switch between **Side by side** and **Unified**; the choice is remembered.
-- **Older pair** / **Newer pair** step through neighbouring versions; **Previous change** / **Next change** jump between the changes.
-- Trailing spaces and line ending differences are ignored by default (a checkbox turns this off).
-- Title changes are shown above the body. The view shows side-by-side columns when it is at least 600px wide, and one column when narrower.
+### Good to know
 
-Click **Close**, or open another note, to return to the editor. Joplin's "Toggle editors" button also switches between the editor and the history diff of the current note.
+- Joplin saves a revision only when a note is changed at least 10 minutes (by default) after the previous revision, and keeps revisions for 90 days (by default). The "previous" revision can therefore be older than your last edit. You can change these settings in **Tools > Options > Note History**.
+- The history diff works in the main window only. For a note opened in its own window, open it in the main window to see its history.
+- When Joplin starts with the history diff left open, the view may flash briefly before the normal editor comes back.
 
-Joplin saves a revision only when a note is changed at least 10 minutes (by default) after the previous revision, so the "previous" revision can be older than your last edit.
+## Requirements
 
-- Specification (Japanese): [docs/spec.md](docs/spec.md)
-- Verification and test log (Japanese): [docs/prototype.md](docs/prototype.md)
+- Joplin desktop 3.7 or later (Windows, macOS, Linux). Mobile is not supported yet.
 
-## Build
+## Development
 
 ```sh
 npm install
-npm run dist
+npm test        # unit tests (Jest)
+npm run dist    # builds the plugin archive (.jpl) into publish/
 ```
 
-The plugin archive is written to `publish/`. See [GENERATOR_DOC.md](GENERATOR_DOC.md) for details on the build tooling.
-
-## Test
-
-```sh
-npm test
-```
-
-Unit tests (Jest) cover the code that does not depend on the Joplin API: `src/history`, `src/diff`, `src/core` and `src/ui`.
-
-## Source layout
+See [GENERATOR_DOC.md](GENERATOR_DOC.md) for details on the build tooling.
 
 | Path | Contents |
 | --- | --- |
 | `src/history/` | Revision index, patch handling, version rebuilding with checkpoints, cache |
-| `src/diff/` | Line diff |
-| `src/core/` | Which versions to compare (F1) and the version diff (F5) |
-| `src/ui/` | View rendering, diff views, UI strings (English / Japanese), webview script and style |
-| `src/editorViewController.ts` | Editor view (shown in the editor area), command, toolbar button and note events |
+| `src/diff/` | Line diff, character diff, whitespace handling |
+| `src/core/` | Which versions to compare, version choices, neighbouring pairs |
+| `src/ui/` | View rendering, diff views, UI strings (English / Japanese), date formats, webview script and style |
+| `src/editorViewController.ts` | Editor view in the editor area, commands, toolbar button, settings |
 | `test/` | Unit tests and test fixtures |
+
+The specification ([docs/spec.md](docs/spec.md)) and the verification and test log ([docs/prototype.md](docs/prototype.md)) are written in Japanese.
 
 ## License
 
-MIT
+[MIT](LICENSE). The plugin includes [diff-match-patch](https://github.com/google/diff-match-patch) (Apache License 2.0); see [src/THIRD-PARTY-NOTICES.txt](src/THIRD-PARTY-NOTICES.txt).
