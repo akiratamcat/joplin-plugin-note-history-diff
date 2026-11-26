@@ -125,9 +125,11 @@ function foldHtml(count: number, labels: DiffViewLabels): string {
 	return `<div class="fold">${escapeHtml(labels.foldedLines(count))}</div>`;
 }
 
-function unifiedLine(kind: 'equal' | 'delete' | 'insert', cell: SideCell): string {
+// F7: the first line of each block of changes carries the class "hunk", the
+// targets of the "Previous change" / "Next change" buttons.
+function unifiedLine(kind: 'equal' | 'delete' | 'insert', cell: SideCell, hunk = false): string {
 	const sign = kind === 'insert' ? '+' : kind === 'delete' ? '−' : ' ';
-	return `<div class="line ${kind}"><span class="sign">${sign}</span>${segmentsHtml(cell.text, cell.segments)}</div>`;
+	return `<div class="line ${kind}${hunk ? ' hunk' : ''}"><span class="sign">${sign}</span>${segmentsHtml(cell.text, cell.segments)}</div>`;
 }
 
 // One column: in each block of changes, the deleted lines, then the inserted ones.
@@ -152,8 +154,10 @@ export function renderUnified(rows: SideRow[], labels: DiffViewLabels): string {
 			block.push(items[index] as SideRow);
 			index++;
 		}
-		for (const row of block) if (row.left) html.push(unifiedLine('delete', row.left));
-		for (const row of block) if (row.right) html.push(unifiedLine('insert', row.right));
+		const lines: [('delete' | 'insert'), SideCell][] = [];
+		for (const row of block) if (row.left) lines.push(['delete', row.left]);
+		for (const row of block) if (row.right) lines.push(['insert', row.right]);
+		lines.forEach(([kind, cell], i) => html.push(unifiedLine(kind, cell, i === 0)));
 	}
 	return html.join('');
 }
@@ -164,10 +168,16 @@ function sideCell(cell: SideCell | null, changeClass: string): string {
 }
 
 export function renderSideBySide(rows: SideRow[], labels: DiffViewLabels): string {
+	let inBlock = false;
 	const html = foldRuns(rows, r => r.kind === 'equal').map(row => {
-		if (isFold(row)) return `<div class="sbs-fold">${foldHtml(row.count, labels)}</div>`;
+		if (isFold(row)) {
+			inBlock = false;
+			return `<div class="sbs-fold">${foldHtml(row.count, labels)}</div>`;
+		}
 		const changed = row.kind === 'change';
-		return `<div class="sbs-row">${sideCell(row.left, changed ? 'delete' : '')}${sideCell(row.right, changed ? 'insert' : '')}</div>`;
+		const hunk = changed && !inBlock;
+		inBlock = changed;
+		return `<div class="sbs-row${hunk ? ' hunk' : ''}">${sideCell(row.left, changed ? 'delete' : '')}${sideCell(row.right, changed ? 'insert' : '')}</div>`;
 	});
 	return `<div class="sbs">${html.join('')}</div>`;
 }

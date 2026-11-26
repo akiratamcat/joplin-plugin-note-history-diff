@@ -1,4 +1,4 @@
-import { VersionChoice, VersionDiff } from '../core/comparison';
+import { neighbourPair, VersionChoice, VersionDiff } from '../core/comparison';
 import { DateTimeFormat, formatDateTime } from './dateFormat';
 import { inlineDiff } from '../diff/inlineDiff';
 import { escapeHtml, renderDiffViews, segmentsHtml } from './diffView';
@@ -28,6 +28,14 @@ export interface RenderOptions {
 	// Joplin's date and time formats; the locale's format when omitted.
 	format?: DateTimeFormat;
 	mode?: DisplayMode;
+	// F9: whether trailing whitespace and line endings are ignored.
+	ignoreWhitespace?: boolean;
+}
+
+interface ResolvedOptions {
+	format: DateTimeFormat;
+	mode: DisplayMode;
+	ignoreWhitespace: boolean;
 }
 
 function choiceLabel(choice: VersionChoice, strings: Strings, format: DateTimeFormat): string {
@@ -47,6 +55,15 @@ function picker(name: 'from' | 'to', label: string, choices: VersionChoice[], se
 		return `<option ${attributes}>${escapeHtml(choiceLabel(choice, strings, format))}</option>`;
 	}).join('');
 	return `<label class="picker"><span>${escapeHtml(label)}</span><select data-select="${name}">${options}</select></label>`;
+}
+
+// F6: step to the neighbouring pair of versions, one older or one newer.
+function pairButtons(state: Extract<PanelState, { kind: 'result' }>, strings: Strings): string {
+	const button = (direction: 'older' | 'newer', label: string) => {
+		const pair = neighbourPair(state.choices, state.fromKey, state.toKey, direction);
+		return `<button data-action="pair-${direction}"${pair ? '' : ' disabled'}>${escapeHtml(label)}</button>`;
+	};
+	return `<span class="pairs">${button('older', strings.olderPair)}${button('newer', strings.newerPair)}</span>`;
 }
 
 function toolbar(strings: Strings): string {
@@ -81,12 +98,14 @@ function renderBody(diff: VersionDiff, strings: Strings): string {
 	return `<div class="diff">${renderDiffViews(body.lines, { foldedLines: strings.foldedLines })}</div>`;
 }
 
-function renderResult(state: Extract<PanelState, { kind: 'result' }>, strings: Strings, format: DateTimeFormat, mode: DisplayMode): string {
+function renderResult(state: Extract<PanelState, { kind: 'result' }>, strings: Strings, options: ResolvedOptions): string {
 	const { diff } = state;
+	const { format, mode } = options;
 	const pickers = `
 	<div class="pickers">
 		${picker('from', strings.from, state.choices, state.fromKey, strings, format)}
 		${picker('to', strings.to, state.choices, state.toKey, strings, format)}
+		${pairButtons(state, strings)}
 	</div>`;
 	if (state.fromKey === state.toKey) return `${pickers}${message(strings.sameVersion)}`;
 	const explanation = state.explanation === 'previous-vs-latest' ? strings.previousVsLatest
@@ -95,13 +114,20 @@ function renderResult(state: Extract<PanelState, { kind: 'result' }>, strings: S
 	const modeButton = (value: DisplayMode, label: string) =>
 		`<button data-mode="${value}" class="${mode === value ? 'active' : ''}">${escapeHtml(label)}</button>`;
 	const modes = `<span class="modes">${modeButton('side', strings.modeSideBySide)}${modeButton('unified', strings.modeUnified)}</span>`;
+	const hasChanges = diff.body.added > 0 || diff.body.removed > 0;
+	const jumps = hasChanges ? `<span class="jumps">
+		<button data-jump="previous">${escapeHtml(strings.previousChange)}</button>
+		<button data-jump="next">${escapeHtml(strings.nextChange)}</button>
+	</span>` : '';
+	const whitespace = `<label class="toggle"><input type="checkbox" data-toggle="whitespace"${options.ignoreWhitespace ? ' checked' : ''}> ${escapeHtml(strings.ignoreWhitespace)}</label>`;
 	return `${pickers}
-	<div class="meta-row"><p class="meta">${explanation ? `${escapeHtml(explanation)} · ` : ''}${stats}</p>${modes}</div>
+	<div class="meta-row"><p class="meta">${explanation ? `${escapeHtml(explanation)} · ` : ''}${stats}</p>${jumps}</div>
+	<div class="controls">${whitespace}${modes}</div>
 	${renderTitle(diff, strings)}
 	${renderBody(diff, strings)}`;
 }
 
-function renderContent(state: PanelState, strings: Strings, format: DateTimeFormat, mode: DisplayMode): string {
+function renderContent(state: PanelState, strings: Strings, options: ResolvedOptions): string {
 	switch (state.kind) {
 	case 'loading':
 		return message(strings.loading);
@@ -120,11 +146,15 @@ function renderContent(state: PanelState, strings: Strings, format: DateTimeForm
 	case 'error':
 		return message(strings.error(state.message));
 	case 'result':
-		return renderResult(state, strings, format, mode);
+		return renderResult(state, strings, options);
 	}
 }
 
 export function renderPanel(state: PanelState, strings: Strings, options: RenderOptions = {}): string {
-	const mode = options.mode || 'side';
-	return `<div class="nhd mode-${mode}">${toolbar(strings)}${renderContent(state, strings, options.format || LOCALE_FORMAT, mode)}</div>`;
+	const resolved: ResolvedOptions = {
+		format: options.format || LOCALE_FORMAT,
+		mode: options.mode || 'side',
+		ignoreWhitespace: options.ignoreWhitespace !== false,
+	};
+	return `<div class="nhd mode-${resolved.mode}">${toolbar(strings)}${renderContent(state, strings, resolved)}</div>`;
 }

@@ -2,7 +2,7 @@
 
 A Joplin plugin to compare two revisions of a note and see what changed.
 
-> Status: in development (v0.6.0, MVP). Not published to the plugin repository yet.
+> Status: in development (v0.7.0). Not published to the plugin repository yet.
 
 ## Usage
 
@@ -14,6 +14,8 @@ The history diff replaces the note editor, like Joplin's own note history view, 
 - If not (the latest revision equals the note): previous revision → latest revision.
 - Pick other versions to compare in the **From** and **To** lists: every revision (newest first, with its date and length) and the current note.
 - Changed characters inside a changed line are highlighted. Switch between **Side by side** and **Unified**; the choice is remembered.
+- **Older pair** / **Newer pair** step through neighbouring versions; **Previous change** / **Next change** jump between the changes.
+- Trailing spaces and line ending differences are ignored by default (a checkbox turns this off).
 - Title changes are shown above the body. The view shows side-by-side columns when it is at least 600px wide, and one column when narrower.
 
 Click **Close**, or open another note, to return to the editor. Joplin's "Toggle editors" button also switches between the editor and the history diff of the current note.

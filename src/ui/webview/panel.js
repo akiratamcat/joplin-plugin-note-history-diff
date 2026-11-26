@@ -6,7 +6,49 @@
 // does not always send an update when the user shows the view with its
 // "toggle editor" button (v0.3.4 test), and a hidden view has no size.
 (function() {
+	// F7: the first line of each block of changes in the layout on screen.
+	function visibleHunks() {
+		const selectors = ['.view-sbs', '.view-unified'];
+		for (let i = 0; i < selectors.length; i++) {
+			const view = document.querySelector(selectors[i]);
+			if (view && view.offsetParent !== null) return Array.prototype.slice.call(view.querySelectorAll('.hunk'));
+		}
+		return [];
+	}
+
+	// Scrolls to the next or previous block of changes, leaving a few lines of
+	// context above it, and flashes it.
+	const JUMP_MARGIN = 48;
+	function jump(direction) {
+		const scroller = document.querySelector('.nhd');
+		const hunks = visibleHunks();
+		if (!scroller || !hunks.length) return;
+		const top = scroller.getBoundingClientRect().top;
+		const offset = function(hunk) { return hunk.getBoundingClientRect().top - top - JUMP_MARGIN; };
+		let target = null;
+		if (direction === 'next') {
+			target = hunks.find(function(hunk) { return offset(hunk) > 2; }) || null;
+		} else {
+			for (let i = hunks.length - 1; i >= 0; i--) {
+				if (offset(hunks[i]) < -2) {
+					target = hunks[i];
+					break;
+				}
+			}
+		}
+		if (!target) return;
+		scroller.scrollTop += offset(target);
+		target.classList.remove('jump-target');
+		void target.offsetWidth;
+		target.classList.add('jump-target');
+	}
+
 	document.addEventListener('click', function(event) {
+		const jumpButton = event.target && event.target.closest ? event.target.closest('[data-jump]') : null;
+		if (jumpButton) {
+			jump(jumpButton.getAttribute('data-jump'));
+			return;
+		}
 		// F3: switch the layout at once; the plugin remembers the choice.
 		const modeButton = event.target && event.target.closest ? event.target.closest('[data-mode]') : null;
 		if (modeButton) {
@@ -30,6 +72,11 @@
 	// F2: picking another version sends both sides; the plugin recomputes the diff.
 	document.addEventListener('change', function(event) {
 		const target = event.target;
+		// F9: the plugin recomputes the diff with or without whitespace differences.
+		if (target && target.matches && target.matches('input[data-toggle="whitespace"]')) {
+			webviewApi.postMessage({ type: 'whitespace', ignore: !!target.checked });
+			return;
+		}
 		if (!target || !target.matches || !target.matches('select[data-select]')) return;
 		const from = document.querySelector('select[data-select="from"]');
 		const to = document.querySelector('select[data-select="to"]');

@@ -1,6 +1,6 @@
 import joplin from 'api';
 import { MenuItemLocation, SettingItemType, ToolbarButtonLocation } from 'api/types';
-import { ComparisonSide, CurrentNote, diffVersions, listVersionChoices, planDefaultComparison, sideForKey, sideKey, VersionChoice } from './core/comparison';
+import { ComparisonSide, CurrentNote, diffVersions, listVersionChoices, neighbourPair, planDefaultComparison, sideForKey, sideKey, VersionChoice } from './core/comparison';
 import { RebuildError, RevisionRebuilder } from './history/revisionRebuilder';
 import { joplinRevisionFetcher } from './history/joplinFetcher';
 import { RevisionRepository } from './history/revisionRepository';
@@ -31,6 +31,8 @@ const AUTO_REOPEN_WINDOW_MS = 2000;
 const SHOWN_EDITOR_VIEWS_SETTING = 'plugins.shownEditorViewIds';
 // F3: the display mode the user picked last. Internal: not shown in Options.
 const DISPLAY_MODE_SETTING = 'displayMode';
+// F9: whether trailing whitespace and line endings are ignored. Internal too.
+const IGNORE_WHITESPACE_SETTING = 'ignoreWhitespace';
 const STARTUP_REOPEN_WINDOW_MS = 5000;
 
 async function globalSetting(key: string): Promise<any> {
@@ -100,7 +102,19 @@ export async function registerHistoryEditorView(): Promise<void> {
 			public: false,
 			label: 'Display mode (side or unified)',
 		},
+		[IGNORE_WHITESPACE_SETTING]: {
+			value: true,
+			type: SettingItemType.Bool,
+			public: false,
+			label: 'Ignore trailing whitespace and line endings',
+		},
 	});
+	let ignoreWhitespace = true;
+	try {
+		ignoreWhitespace = (await joplin.settings.value(IGNORE_WHITESPACE_SETTING)) !== false;
+	} catch (error) {
+		console.warn('Note History Diff: could not read the whitespace setting', error);
+	}
 	let displayMode: DisplayMode = 'side';
 	try {
 		displayMode = (await joplin.settings.value(DISPLAY_MODE_SETTING)) === 'unified' ? 'unified' : 'side';
@@ -145,7 +159,7 @@ export async function registerHistoryEditorView(): Promise<void> {
 	};
 
 	const render = async (state: PanelState) => {
-		if (viewHandle) await joplin.views.editors.setHtml(viewHandle, renderPanel(state, strings, { format: dateTimeFormat, mode: displayMode }));
+		if (viewHandle) await joplin.views.editors.setHtml(viewHandle, renderPanel(state, strings, { format: dateTimeFormat, mode: displayMode, ignoreWhitespace }));
 	};
 
 	let session: Session | null = null;
@@ -155,7 +169,7 @@ export async function registerHistoryEditorView(): Promise<void> {
 		choices: current.choices,
 		fromKey: current.fromKey,
 		toKey: current.toKey,
-		diff: diffVersions(from.version, to.version),
+		diff: diffVersions(from.version, to.version, { ignoreWhitespace }),
 		explanation: current.explanation,
 	});
 
@@ -224,12 +238,9 @@ export async function registerHistoryEditorView(): Promise<void> {
 		if (mine === generation) await render(state);
 	};
 
-	// F2: the user picked other versions.
-	const select = async (fromKey: string, toKey: string) => {
+	// Recomputes the diff of the versions the session has selected.
+	const recompute = async () => {
 		if (!session || session.noteId !== historyNoteId) return;
-		session.fromKey = fromKey;
-		session.toKey = toKey;
-		session.explanation = null;
 		const mine = ++generation;
 		let state: PanelState;
 		try {
@@ -239,6 +250,22 @@ export async function registerHistoryEditorView(): Promise<void> {
 			state = { kind: 'error', message: errorMessage(error) };
 		}
 		if (mine === generation) await render(state);
+	};
+
+	// F2: the user picked other versions.
+	const select = async (fromKey: string, toKey: string) => {
+		if (!session || session.noteId !== historyNoteId) return;
+		session.fromKey = fromKey;
+		session.toKey = toKey;
+		session.explanation = null;
+		await recompute();
+	};
+
+	// F6: step to the neighbouring pair of versions.
+	const stepPair = async (direction: 'older' | 'newer') => {
+		if (!session) return;
+		const pair = neighbourPair(session.choices, session.fromKey, session.toKey, direction);
+		if (pair) await select(pair.fromKey, pair.toKey);
 	};
 
 	const isVisible = async () => {
@@ -352,6 +379,13 @@ export async function registerHistoryEditorView(): Promise<void> {
 				if (message.type === 'refresh' && historyNoteId) await refresh(historyNoteId, { reloadHistory: true });
 				if (message.type === 'shown') await handleShown(windowNoteId, 'webview');
 				if (message.type === 'select' && typeof message.from === 'string' && typeof message.to === 'string') await select(message.from, message.to);
+				if (message.type === 'pair-older') await stepPair('older');
+				if (message.type === 'pair-newer') await stepPair('newer');
+				if (message.type === 'whitespace' && typeof message.ignore === 'boolean') {
+					ignoreWhitespace = message.ignore;
+					await joplin.settings.setValue(IGNORE_WHITESPACE_SETTING, ignoreWhitespace);
+					await recompute();
+				}
 				if (message.type === 'mode' && (message.mode === 'side' || message.mode === 'unified')) {
 					// The view already switched; remember the choice for next time.
 					displayMode = message.mode;

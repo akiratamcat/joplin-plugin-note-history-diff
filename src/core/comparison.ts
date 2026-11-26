@@ -1,4 +1,5 @@
 import { lineDiff, LineDiffResult } from '../diff/lineDiff';
+import { normalizeWhitespace } from '../diff/whitespace';
 import { RebuildError, RevisionRebuilder } from '../history/revisionRebuilder';
 import { NoteVersion } from '../history/types';
 
@@ -57,12 +58,20 @@ export interface VersionDiff {
 	body: LineDiffResult;
 }
 
+export interface DiffOptions {
+	// F9: ignore differences in trailing whitespace and line endings.
+	ignoreWhitespace?: boolean;
+}
+
 // F5: the title is compared separately from the body.
-export function diffVersions(from: NoteVersion, to: NoteVersion): VersionDiff {
+export function diffVersions(from: NoteVersion, to: NoteVersion, options: DiffOptions = {}): VersionDiff {
+	const clean = options.ignoreWhitespace ? normalizeWhitespace : (text: string) => text;
+	const before = { title: clean(from.title), body: clean(from.body) };
+	const after = { title: clean(to.title), body: clean(to.body) };
 	return {
-		titleChanged: from.title !== to.title,
-		title: { before: from.title, after: to.title },
-		body: lineDiff(from.body, to.body),
+		titleChanged: before.title !== after.title,
+		title: { before: before.title, after: after.title },
+		body: lineDiff(before.body, after.body),
 	};
 }
 
@@ -103,4 +112,31 @@ export function sideForKey(rebuilder: RevisionRebuilder, current: CurrentNote, k
 		if (rebuilder.revisionAt(i).id === key) return revisionSide(rebuilder, i);
 	}
 	return null;
+}
+
+// F6: the pair of neighbouring versions one step older or newer than the
+// selected ones, for the "Older pair" / "Newer pair" buttons. Choices are
+// newest first, so the newer selected version sits at the lower index n.
+// From a pair of neighbours (n+1 → n), the older pair is (n+2 → n+1) and the
+// newer pair (n → n-1): one step back or forward. From versions that are not
+// neighbours, the older pair is the one ending at the newer version
+// (n+1 → n). Null when there is no such pair or one of its versions cannot
+// be read.
+export function neighbourPair(
+	choices: VersionChoice[],
+	fromKey: string,
+	toKey: string,
+	direction: 'older' | 'newer',
+): { fromKey: string; toKey: string } | null {
+	const fromIndex = choices.findIndex(choice => choice.key === fromKey);
+	const toIndex = choices.findIndex(choice => choice.key === toKey);
+	if (fromIndex < 0 || toIndex < 0) return null;
+	const newer = Math.min(fromIndex, toIndex);
+	const neighbours = Math.abs(fromIndex - toIndex) === 1;
+	const toAt = direction === 'older' ? (neighbours ? newer + 1 : newer) : newer - 1;
+	const pairTo = choices[toAt];
+	const pairFrom = choices[toAt + 1];
+	if (toAt < 0 || !pairTo || !pairFrom) return null;
+	if (pairTo.bodyLength === null || pairFrom.bodyLength === null) return null;
+	return { fromKey: pairFrom.key, toKey: pairTo.key };
 }
