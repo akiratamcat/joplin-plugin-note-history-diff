@@ -811,3 +811,14 @@ v1.0.0 として直接公開する（試用版の期間は設けない。利用�
   - `test/fixtures/` はスクリプト（`scripts/make-test-notes.mjs`）で作った架空の内容。
   - `docs/prototype.md` の記録に、実際のノートの題名や内容は書かれていない（「履歴があるノート」などテスト用の名前だけ）。
   - 全 53 件のコミットの作者は `akira tamcat <akiratamcat@gmail.com>`。push するとこのアドレスが公開される（利用者に伝え済み）。
+
+---
+
+## v1.0.0 公開（2026-11-26）
+
+- GitHub に公開リポジトリを作って push（https://github.com/akiratamcat/joplin-plugin-note-history-diff）。説明文は英日併記、非公開の脆弱性報告を有効にした。
+- 公開前に、利用者の依頼で他のプラグイン（dg-plantuml、dg-echarts）と同じ形にそろえた：利用者向けの文書を英日併記（README、CHANGELOG、CONTRIBUTING、SECURITY、THIRD_PARTY_NOTICES）、UI の翻訳を gettext（PO ファイル）にして 11 言語。利用者が日本語と英語の表示を確認した。
+- `npm publish` は npm の二段階認証（ブラウザでの認証）が必要なため、利用者が実行した。`joplin-plugin-note-history-diff@1.0.0` が npm の最新版（latest）になった。一緒に出る `0.0.0-stage` は、npm が初回公開のときに作る仮の版（stub）。
+- タグ `v1.0.0` を push し、GitHub Releases に `.jpl` を添付した（本文は CHANGELOG の英日）。
+- 公開時の npm の警告（`repository.url` の書き方）に合わせて、`package.json` の URL を `git+https://…` にした。
+- 残り：公式プラグイン一覧と Joplin 本体の検索に出ることの確認（公式リポジトリは 30 分ごとに更新される）。

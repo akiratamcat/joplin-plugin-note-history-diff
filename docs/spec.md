@@ -236,14 +236,16 @@ npm に公開した時点で一覧に載るため、v1 より前の試用版は 
 
 ### 公開の条件（チェックリスト）
 
-- [ ] npm アカウント（[akiratamcat](https://www.npmjs.com/~akiratamcat)）で `npm login` する
-- [ ] `package.json` の `name` が `joplin-plugin-` で始まる（名前：`joplin-plugin-note-history-diff`。2026-11-25 時点で npm では未使用）
-- [ ] `package.json` の `keywords` に `joplin-plugin` を含む。`"private": true` を外してある
-- [ ] `npm run dist` で `publish/` に `.jpl` と `.json` ができている
-- [ ] `manifest.json` の必須項目（`manifest_version`、`name`、`version`、`app_min_version`）を埋める。`version` は `1.0.0` にし、`npm run updateVersion` で `package.json` とそろえる
-- [ ] GitHub の公開リポジトリ（予定：`https://github.com/akiratamcat/joplin-plugin-note-history-diff`）に push し、`repository_url` と `homepage_url` をそこに向ける。スクリーンショットを相対パスで載せるには、どちらかが GitHub を指している必要がある
-- [ ] `README.md` と `LICENSE`（MIT）を置く
+- [x] npm アカウント（[akiratamcat](https://www.npmjs.com/~akiratamcat)）で `npm login` する
+- [x] `package.json` の `name` が `joplin-plugin-` で始まる（名前：`joplin-plugin-note-history-diff`。2026-11-25 時点で npm では未使用）
+- [x] `package.json` の `keywords` に `joplin-plugin` を含む。`"private": true` を外してある
+- [x] `npm run dist` で `publish/` に `.jpl` と `.json` ができている
+- [x] `manifest.json` の必須項目（`manifest_version`、`name`、`version`、`app_min_version`）を埋める。`version` は `1.0.0` にし、`npm run updateVersion` で `package.json` とそろえる
+- [x] GitHub の公開リポジトリ（予定：`https://github.com/akiratamcat/joplin-plugin-note-history-diff`）に push し、`repository_url` と `homepage_url` をそこに向ける。スクリーンショットを相対パスで載せるには、どちらかが GitHub を指している必要がある
+- [x] `README.md` と `LICENSE`（MIT）を置く
 - [ ] 公開後、npm のキーワード検索、公式プラグイン一覧、Joplin 本体の検索の 3 か所で見つかることを確かめる
+
+2026-11-26 に v1.0.0 を公開した（npm の `joplin-plugin-note-history-diff@1.0.0`、GitHub Releases の v1.0.0 に `.jpl` を添付）。公開前に、利用者向けの文書を英日併記にし、UI を gettext で 11 言語にした。
 
 ### manifest.json の主な項目
 
