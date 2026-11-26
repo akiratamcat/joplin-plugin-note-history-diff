@@ -220,7 +220,7 @@ Joplin は履歴を「前の版との差分」として保存しています。�
 2. **MVP**：F1〜F5 を作り、受け入れ条件を満たす（2026-11-26 に完了。v0.6.0 で受け入れ条件 9 項目をすべて確認）
 3. **次の段階**：F6・F7・F9（表示と移動の使いやすさ）を足す
 4. **部分的に戻す**：F10 は v1 の後に回す（2026-11-26 に決定）。ノートを書き換えるので、単独でテストしてから公開する
-5. **v1 リリース（ゴール）**：8 章の条件を満たして npm に公開し、公式プラグイン一覧と Joplin 本体の検索に出ることを確かめてから、[要望のフォーラム](https://discourse.joplinapp.org/t/side-by-side-difference-view-for-note-history/26461)で知らせる（2026-11-26 に v1.0.0 を npm と GitHub に公開。同日、公式一覧に掲載され、Joplin 本体の検索で見つかることを確認。v1 達成。フォーラムでの告知が残り）
+5. **v1 リリース（ゴール）**：8 章の条件を満たして npm に公開し、公式プラグイン一覧と Joplin 本体の検索に出ることを確かめてから、[要望のフォーラム](https://discourse.joplinapp.org/t/side-by-side-difference-view-for-note-history/26461)で知らせる（2026-11-26 に v1.0.0 を npm と GitHub に公開。同日、公式一覧に掲載され、Joplin 本体の検索で見つかることを確認。v1 達成。フォーラムの Plugins カテゴリに紹介を投稿し、翌 11-27 に公開された（https://discourse.joplinapp.org/t/note-history-diff-compare-two-revisions-of-a-note-side-by-side/51706 ））
 6. **v1 の後**：モバイル版、F10（部分的に戻す）、F15（大きなダイアログ）に対応する。F11〜F14 は利用者の声を見て順番を決める
 
 ## 8. v1（正式リリース）の条件
