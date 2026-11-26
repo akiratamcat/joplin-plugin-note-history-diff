@@ -6,7 +6,7 @@
 	--nhd-insert-chars: rgba(46, 160, 67, 0.42);
 	--nhd-delete-line: rgba(248, 81, 73, 0.16);
 	--nhd-delete-chars: rgba(248, 81, 73, 0.42);
-	--nhd-empty-stripe: rgba(110, 110, 110, 0.22);
+	--nhd-empty: rgba(110, 110, 110, 0.16);
 	--nhd-fold: rgba(128, 128, 128, 0.1);
 }
 
@@ -15,7 +15,7 @@
 	--nhd-insert-chars: rgba(63, 185, 80, 0.62);
 	--nhd-delete-line: rgba(248, 81, 73, 0.32);
 	--nhd-delete-chars: rgba(248, 81, 73, 0.62);
-	--nhd-empty-stripe: rgba(200, 200, 200, 0.22);
+	--nhd-empty: rgba(200, 200, 200, 0.14);
 	--nhd-fold: rgba(160, 160, 160, 0.16);
 }
 
@@ -203,15 +203,10 @@ body {
 	border-left: 1px solid var(--joplin-divider-color, #ddd);
 }
 
-/* The side with no line: diagonal stripes, readable in both themes. */
+/* The side with no line: a plain grey, darker in the light theme and
+   lighter in the dark theme than before (stripes were harder to see, v0.5.1 test). */
 .nhd .sbs .cell.empty {
-	background-image: repeating-linear-gradient(
-		-45deg,
-		var(--nhd-empty-stripe) 0,
-		var(--nhd-empty-stripe) 2px,
-		transparent 2px,
-		transparent 7px
-	);
+	background-color: var(--nhd-empty);
 }
 
 .nhd .view-unified {
