@@ -5,6 +5,7 @@ import { RebuildError, RevisionRebuilder } from './history/revisionRebuilder';
 import { joplinRevisionFetcher } from './history/joplinFetcher';
 import { RevisionRepository } from './history/revisionRepository';
 import { stringsFor } from './ui/i18n';
+import { DateTimeFormat } from './ui/dateFormat';
 import { ComparisonExplanation, PanelState, renderPanel } from './ui/panelView';
 
 // Shows the note history diff in the editor area (where the note editor is),
@@ -122,8 +123,17 @@ export async function registerHistoryEditorView(): Promise<void> {
 		console.info(`Note History Diff: ${line}`);
 	};
 
+	// Joplin's date and time formats (Options > General), read again on every
+	// load so that a change applies the next time the history is shown.
+	let dateTimeFormat: DateTimeFormat = { date: null, time: null };
+	const readDateTimeFormat = async () => {
+		const date = await globalSetting('dateFormat');
+		const time = await globalSetting('timeFormat');
+		dateTimeFormat = { date: typeof date === 'string' ? date : null, time: typeof time === 'string' ? time : null };
+	};
+
 	const render = async (state: PanelState) => {
-		if (viewHandle) await joplin.views.editors.setHtml(viewHandle, renderPanel(state, strings));
+		if (viewHandle) await joplin.views.editors.setHtml(viewHandle, renderPanel(state, strings, dateTimeFormat));
 	};
 
 	let session: Session | null = null;
@@ -193,6 +203,7 @@ export async function registerHistoryEditorView(): Promise<void> {
 		await render({ kind: 'loading' });
 		let state: PanelState;
 		try {
+			await readDateTimeFormat();
 			state = await computeState(noteId, keep);
 		} catch (error) {
 			console.error('Note History Diff: could not compute the diff', error);

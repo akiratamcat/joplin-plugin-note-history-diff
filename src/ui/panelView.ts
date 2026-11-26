@@ -1,4 +1,5 @@
 import { VersionChoice, VersionDiff } from '../core/comparison';
+import { DateTimeFormat, formatDateTime } from './dateFormat';
 import { escapeHtml, renderDiffViews } from './diffView';
 import { Strings } from './i18n';
 
@@ -16,25 +17,23 @@ export type PanelState =
 	| { kind: 'error'; message: string }
 	| { kind: 'result'; choices: VersionChoice[]; fromKey: string; toKey: string; diff: VersionDiff; explanation: ComparisonExplanation };
 
-function formatTime(ms: number, strings: Strings): string {
-	return new Date(ms).toLocaleString(strings.locale === 'ja' ? 'ja-JP' : undefined);
-}
+const LOCALE_FORMAT: DateTimeFormat = { date: null, time: null };
 
-function choiceLabel(choice: VersionChoice, strings: Strings): string {
-	const name = choice.kind === 'current' ? strings.currentNote : strings.revision(formatTime(choice.time, strings));
+function choiceLabel(choice: VersionChoice, strings: Strings, format: DateTimeFormat): string {
+	const name = choice.kind === 'current' ? strings.currentNote : strings.revision(formatDateTime(choice.time, format, strings.locale));
 	const size = choice.bodyLength === null ? strings.unavailable : strings.chars(choice.bodyLength);
 	return `${name}（${size}）`;
 }
 
 // F2: a version picker. Revisions that cannot be rebuilt are listed but disabled.
-function picker(name: 'from' | 'to', label: string, choices: VersionChoice[], selectedKey: string, strings: Strings): string {
+function picker(name: 'from' | 'to', label: string, choices: VersionChoice[], selectedKey: string, strings: Strings, format: DateTimeFormat): string {
 	const options = choices.map(choice => {
 		const attributes = [
 			`value="${escapeHtml(choice.key)}"`,
 			choice.key === selectedKey ? 'selected' : '',
 			choice.bodyLength === null ? 'disabled' : '',
 		].filter(Boolean).join(' ');
-		return `<option ${attributes}>${escapeHtml(choiceLabel(choice, strings))}</option>`;
+		return `<option ${attributes}>${escapeHtml(choiceLabel(choice, strings, format))}</option>`;
 	}).join('');
 	return `<label class="picker"><span>${escapeHtml(label)}</span><select data-select="${name}">${options}</select></label>`;
 }
@@ -70,12 +69,12 @@ function renderBody(diff: VersionDiff, strings: Strings): string {
 	return `<div class="diff">${renderDiffViews(body.lines, { foldedLines: strings.foldedLines })}</div>`;
 }
 
-function renderResult(state: Extract<PanelState, { kind: 'result' }>, strings: Strings): string {
+function renderResult(state: Extract<PanelState, { kind: 'result' }>, strings: Strings, format: DateTimeFormat): string {
 	const { diff } = state;
 	const pickers = `
 	<div class="pickers">
-		${picker('from', strings.from, state.choices, state.fromKey, strings)}
-		${picker('to', strings.to, state.choices, state.toKey, strings)}
+		${picker('from', strings.from, state.choices, state.fromKey, strings, format)}
+		${picker('to', strings.to, state.choices, state.toKey, strings, format)}
 	</div>`;
 	if (state.fromKey === state.toKey) return `${pickers}${message(strings.sameVersion)}`;
 	const explanation = state.explanation === 'previous-vs-latest' ? strings.previousVsLatest
@@ -87,7 +86,7 @@ function renderResult(state: Extract<PanelState, { kind: 'result' }>, strings: S
 	${renderBody(diff, strings)}`;
 }
 
-function renderContent(state: PanelState, strings: Strings): string {
+function renderContent(state: PanelState, strings: Strings, format: DateTimeFormat): string {
 	switch (state.kind) {
 	case 'loading':
 		return message(strings.loading);
@@ -106,10 +105,11 @@ function renderContent(state: PanelState, strings: Strings): string {
 	case 'error':
 		return message(strings.error(state.message));
 	case 'result':
-		return renderResult(state, strings);
+		return renderResult(state, strings, format);
 	}
 }
 
-export function renderPanel(state: PanelState, strings: Strings): string {
-	return `<div class="nhd">${toolbar(strings)}${renderContent(state, strings)}</div>`;
+// `format`: Joplin's date and time formats; the locale's format when omitted.
+export function renderPanel(state: PanelState, strings: Strings, format: DateTimeFormat = LOCALE_FORMAT): string {
+	return `<div class="nhd">${toolbar(strings)}${renderContent(state, strings, format)}</div>`;
 }

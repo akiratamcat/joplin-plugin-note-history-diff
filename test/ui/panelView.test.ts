@@ -76,6 +76,14 @@ describe('renderPanel', () => {
 		expect(html).not.toContain(en.previousVsLatest);
 	});
 
+	test('result: revision dates follow the Joplin date and time formats', () => {
+		const time = new Date(2026, 10, 24, 21, 10).getTime();
+		const dated: VersionChoice[] = [{ key: CURRENT_KEY, kind: 'current', time, bodyLength: 1 }, { key: 'rev-1', kind: 'revision', time, bodyLength: 1 }];
+		const diff = diffVersions({ title: 'T', body: 'x' }, { title: 'T', body: 'y' });
+		const html = renderPanel({ kind: 'result', choices: dated, fromKey: 'rev-1', toKey: CURRENT_KEY, diff, explanation: null }, ja, { date: 'DD/MM/YYYY', time: 'h:mm A' });
+		expect(html).toContain('版 24/11/2026 9:10 PM（1 文字）');
+	});
+
 	test('result: the same version on both sides shows a message instead of a diff', () => {
 		const diff = diffVersions({ title: 'T', body: 'x\n' }, { title: 'T', body: 'x\n' });
 		const html = result(diff, 'rev-2', 'rev-2', null);
