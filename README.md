@@ -4,7 +4,16 @@ Compare two revisions of a Joplin note and see exactly what changed.
 
 Joplin keeps a history of your notes, but its note history view shows one revision at a time. Note History Diff shows the differences between two revisions, or between a revision and the current note, side by side, in the editor area.
 
-<!-- Screenshot: added before the v1.0.0 release. -->
+![Two revisions of a note side by side, with the changed characters highlighted](docs/images/screen-capture-light-theme.png)
+
+<details>
+<summary>More screenshots: dark theme, Japanese user interface</summary>
+
+![The history diff in the dark theme](docs/images/screen-capture-dark-theme.png)
+
+![The history diff with the Japanese user interface](docs/images/screen-capture-light-theme-Japanese.png)
+
+</details>
 
 ## Features
 

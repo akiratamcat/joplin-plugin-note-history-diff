@@ -18,7 +18,20 @@
 	"categories": [
 		"viewer"
 	],
-	"screenshots": [],
+	"screenshots": [
+		{
+			"src": "docs/images/screen-capture-light-theme.png",
+			"label": "Two revisions of a note side by side, with the changed characters highlighted (light theme)"
+		},
+		{
+			"src": "docs/images/screen-capture-dark-theme.png",
+			"label": "The history diff in the dark theme"
+		},
+		{
+			"src": "docs/images/screen-capture-light-theme-Japanese.png",
+			"label": "The history diff with the Japanese user interface"
+		}
+	],
 	"icons": {},
 	"promo_tile": {},
 	"platforms": [
