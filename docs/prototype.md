@@ -300,6 +300,8 @@ v0.3.5 では、ビューの中のスクリプトが、自分の大きさが 0 �
 - 切り替えボタン → 切り替えボタン → 切り替えボタン（同じノートで繰り返す）の結果
   - 同じノートで繰り返してノート表示になっている状態で、別のノートを表示（この段階ではノート表示）して切り替えボタンをクリックすると、履歴へ切り替わらずにノート表示のまま、となる場合がある。再現条件はまだ判らないが、発生頻度が高いため再現条件はありそう。
 
+---
+
 ### v0.3.5 の結果と v0.3.6 での変更
 
 v0.3.5 では、「履歴ボタン →『閉じる』→ 切り替えボタン」を含め、ほとんどの項目が期待どおりになった。
@@ -342,6 +344,67 @@ v0.3.6 での変更：
 
 ### v0.3.6 で確かめること
 
+v0.3.6がインストールされている事を確認してから下記を実施。
+
+| 項目                                                                                                            | 期待                                                    | 結果              |
+| --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- | ----------------- |
+| 同じノートで切り替えボタンを繰り返す → ノート表示で止める → 別のノートを開く → すぐ（2 秒以内）に切り替えボタン | そのノートの履歴が出る                                  | NG。v0.3.5 と同じ |
+| 同じ操作で、別のノートを開いてから少し待って切り替えボタン                                                      | そのノートの履歴が出る                                  | 期待通り          |
+| 表示したまま別のノートを開く                                                                                    | 元のエディタで開く（v0.3.1 の不具合が戻っていないこと） | 期待通り          |
+| 履歴ボタン →「閉じる」→ 切り替えボタン                                                                          | そのノートの履歴が出る                                  | 期待通り          |
+| 起動直後の切り替え、表示したまま再起動、履歴ボタンと「閉じる」                                                  | これまでどおり                                          | 期待通り          |
+
+うまくいかなかったときは、「[dev] Note History Diff: editor view status」の内容を送ってください。
+
+#### 同じノートで切り替えボタンを繰り返す → ノート表示で止める → 別のノートを開く → すぐ（2 秒以内）に切り替えボタン | そのノートの履歴が出る
+
+NG。v0.3.5 と同じ。
+status は下記の通り。
+
+```text
+Note History Diff: editor view status
+view handle: set
+active: true
+visible: false
+history note set: no
+plugins.shownEditorViewIds: [] (at startup: [])
+
+Recent events:
+10:04:09 onSetup (left open at the last exit: false)
+10:04:09 note changed (view visible=false, history note set=false, just hidden=false)
+10:04:13 onActivationCheck → true
+10:04:15 webview shown visible=true note=other
+10:04:15 shown by the toggle editor button (6284 ms after a note change)
+10:04:16 onUpdate visible=true note=history note
+10:04:17 webview shown visible=true note=history note
+10:04:19 webview shown visible=true note=history note
+10:04:22 note changed (view visible=false, history note set=true, just hidden=false)
+10:04:22 close (note changed)
+10:04:22 onActivationCheck → true
+10:04:23 webview shown visible=true note=other
+10:04:23 close (re-opened by Joplin after a note change)
+10:04:23 after toggleEditorPlugin (attempt 1): visible=false
+```
+
+---
+
+### v0.3.6 の結果と v0.3.7 での変更
+
+v0.3.6 では、「ノートを開いてから 2 秒以内に切り替えボタン」だけが v0.3.5 と同じく NG だった。
+
+記録からわかったこと：
+
+- `webview hidden` が一度も出ていない。一方、同じノートで表示し直すたびに `webview shown` が出ている（10:04:17、10:04:19）。Joplin はビューを隠すときに webview を破棄し、表示のたびに作り直しているらしい。破棄されるので「隠れた」とは知らせられない。v0.3.6 の `hidden` メッセージは働かない。
+- ノートを切り替えた時点（10:04:22）の `view visible=false` は正しかった。誤判断の元は、残っていた「履歴を表示中のノート」（`history note set=true`）を根拠にしたこと。
+
+v0.3.7 での変更：
+
+- ノートを切り替えたときに、Joplin が自動で開き直すかどうかを、Joplin 自身が開き直しに使っている設定（`plugins.shownEditorViewIds`）で判断する。この設定は、ビューを隠すとすぐ空になる（v0.3.6 の記録で `[]`）。設定が読めないときだけ、これまでの判断を使う。
+- 働かなかった `hidden` メッセージは取り除いた。
+- 状態の記録の `note changed` に、`remembered as shown`（設定にビューが入っていたか）を出す。
+
+### v0.3.7 で確かめること
+
 | 項目 | 期待 |
 | --- | --- |
 | 同じノートで切り替えボタンを繰り返す → ノート表示で止める → 別のノートを開く → すぐ（2 秒以内）に切り替えボタン | そのノートの履歴が出る |
@@ -350,4 +413,4 @@ v0.3.6 での変更：
 | 履歴ボタン →「閉じる」→ 切り替えボタン | そのノートの履歴が出る |
 | 起動直後の切り替え、表示したまま再起動、履歴ボタンと「閉じる」 | これまでどおり |
 
-うまくいかなかったときは、「[dev] Note History Diff: editor view status」の内容を送ってください。
+うまくいかなかったときは、「[dev] Note History Diff: editor view status」の内容を送ってください。「表示したまま別のノートを開く」の記録（`remembered as shown=true` になっているか）も、うまくいった場合でも一度送ってもらえると、判断の根拠を確かめられる。

@@ -21,7 +21,6 @@ export const EDITOR_STATUS_COMMAND = 'noteHistoryDiff.editorViewStatus';
 const VIEW_ID = 'historyDiffView';
 // An opening of the view this soon after a note change is Joplin re-opening it by itself.
 const AUTO_REOPEN_WINDOW_MS = 2000;
-const HIDDEN_BEFORE_NOTE_CHANGE_MS = 1000;
 // At startup Joplin re-opens a view that was left open; it remembers that in the
 // setting below. The first opening is not always that, though: Joplin does not
 // send updates to a hidden view, so the user's first "toggle editor" press is
@@ -51,6 +50,11 @@ async function historySettings(): Promise<Extract<PanelState, { kind: 'no-histor
 	};
 }
 
+// Whether Joplin's list of shown editor views includes this view. null: unknown.
+function viewRememberedAsShown(shownIds: any): boolean | null {
+	return Array.isArray(shownIds) ? shownIds.some(id => String(id).includes(VIEW_ID)) : null;
+}
+
 function errorMessage(error: any): string {
 	return String(error && error.message ? error.message : error);
 }
@@ -63,9 +67,7 @@ export async function registerHistoryEditorView(): Promise<void> {
 	const strings = stringsFor(await globalSetting('locale'));
 	// Was the view left open when Joplin was last closed? null: unknown.
 	const shownAtStart = await globalSetting(SHOWN_EDITOR_VIEWS_SETTING);
-	const reopenExpected: boolean | null = Array.isArray(shownAtStart)
-		? shownAtStart.some(id => String(id).includes(VIEW_ID))
-		: null;
+	const reopenExpected = viewRememberedAsShown(shownAtStart);
 	const repository = new RevisionRepository(joplinRevisionFetcher);
 
 	let viewHandle: string | null = null;
@@ -76,13 +78,10 @@ export async function registerHistoryEditorView(): Promise<void> {
 	// a note change or a restart (v0.3.1 test). Those openings must not be
 	// mistaken for the user pressing Joplin's "toggle editor" button.
 	let lastNoteChangeAt = 0;
-	// Whether the view was shown when the note last changed. Only then can Joplin
-	// re-open it by itself; otherwise an opening right after a note change is the
-	// user's "toggle editor" press (v0.3.5 test).
+	// Whether Joplin remembered the view as open when the note last changed. Only
+	// then does it re-open the view by itself; otherwise an opening right after a
+	// note change is the user's "toggle editor" press (v0.3.5 / v0.3.6 tests).
 	let shownAtNoteChange = false;
-	// When the history was last hidden. Joplin may hide the view just before it
-	// reports the note change, so a very recent hiding still counts as shown.
-	let historyHiddenAt = 0;
 	let firstShownSeen = false;
 	let closing = false;
 	let setupAt = 0;
@@ -213,17 +212,6 @@ export async function registerHistoryEditorView(): Promise<void> {
 		await showHistory(noteId);
 	};
 
-	// The view was hidden, possibly by Joplin's "toggle editor" button rather than
-	// by "Close": the history is no longer shown, so forget the note.
-	const handleHidden = async () => {
-		const visible = await isVisible();
-		note(`webview hidden visible=${visible}${closing ? ' (closing)' : ''}`);
-		if (visible || closing || !historyNoteId) return;
-		historyHiddenAt = Date.now();
-		historyNoteId = null;
-		generation++;
-	};
-
 	const selectedNoteId = async (): Promise<string | null> => {
 		const ids = await joplin.workspace.selectedNoteIds();
 		return ids && ids.length === 1 ? ids[0] : null;
@@ -241,7 +229,6 @@ export async function registerHistoryEditorView(): Promise<void> {
 				if (message.type === 'close') await close('close button');
 				if (message.type === 'refresh' && historyNoteId) await refresh(historyNoteId, { reloadHistory: true });
 				if (message.type === 'shown') await handleShown(await selectedNoteId(), 'webview');
-				if (message.type === 'hidden') await handleHidden();
 				return null;
 			});
 			// Called when the selected note changes or when the view becomes visible.
@@ -261,10 +248,13 @@ export async function registerHistoryEditorView(): Promise<void> {
 		lastNoteChangeAt = Date.now();
 		const selected = event && event.value && event.value.length ? event.value[0] : null;
 		const visible = await isVisible();
-		const justHidden = Date.now() - historyHiddenAt < HIDDEN_BEFORE_NOTE_CHANGE_MS;
-		shownAtNoteChange = visible || historyNoteId !== null || justHidden;
-		note(`note changed (view visible=${visible}, history note set=${historyNoteId !== null}, just hidden=${justHidden})`);
-		if (selected !== historyNoteId && shownAtNoteChange) await close('note changed');
+		// Joplin destroys the webview when it is hidden, so the view cannot report
+		// that (v0.3.6 test) and historyNoteId may be stale. The setting Joplin
+		// uses to re-open the view is the reliable source; it empties on hiding.
+		const remembered = viewRememberedAsShown(await globalSetting(SHOWN_EDITOR_VIEWS_SETTING));
+		shownAtNoteChange = visible || (remembered === null ? historyNoteId !== null : remembered);
+		note(`note changed (view visible=${visible}, remembered as shown=${remembered === null ? 'unknown' : remembered}, history note set=${historyNoteId !== null})`);
+		if (selected !== historyNoteId && (historyNoteId || visible)) await close('note changed');
 	});
 
 	await joplin.commands.register({
