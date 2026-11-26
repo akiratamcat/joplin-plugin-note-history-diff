@@ -1,3 +1,24 @@
+/* Diff colours. The same translucent colours look washed out on a dark
+   background, so panel.js marks a dark Joplin theme on <html> and the dark
+   values below apply (v0.5.0 test). */
+:root {
+	--nhd-insert-line: rgba(46, 160, 67, 0.16);
+	--nhd-insert-chars: rgba(46, 160, 67, 0.42);
+	--nhd-delete-line: rgba(248, 81, 73, 0.16);
+	--nhd-delete-chars: rgba(248, 81, 73, 0.42);
+	--nhd-empty-stripe: rgba(110, 110, 110, 0.22);
+	--nhd-fold: rgba(128, 128, 128, 0.1);
+}
+
+:root.nhd-dark {
+	--nhd-insert-line: rgba(63, 185, 80, 0.32);
+	--nhd-insert-chars: rgba(63, 185, 80, 0.62);
+	--nhd-delete-line: rgba(248, 81, 73, 0.32);
+	--nhd-delete-chars: rgba(248, 81, 73, 0.62);
+	--nhd-empty-stripe: rgba(200, 200, 200, 0.22);
+	--nhd-fold: rgba(160, 160, 160, 0.16);
+}
+
 /* The editor area gives the view a fixed height: scroll inside it. */
 html,
 body {
@@ -134,24 +155,24 @@ body {
 
 .nhd .line.insert,
 .nhd .sbs .cell.insert {
-	background-color: rgba(46, 160, 67, 0.18);
+	background-color: var(--nhd-insert-line);
 }
 
 .nhd .line.delete,
 .nhd .sbs .cell.delete {
-	background-color: rgba(248, 81, 73, 0.18);
+	background-color: var(--nhd-delete-line);
 }
 
 /* F4: the characters that changed inside a changed line. */
 .nhd .line.insert .chg,
 .nhd .sbs .cell.insert .chg {
-	background-color: rgba(46, 160, 67, 0.45);
+	background-color: var(--nhd-insert-chars);
 	border-radius: 2px;
 }
 
 .nhd .line.delete .chg,
 .nhd .sbs .cell.delete .chg {
-	background-color: rgba(248, 81, 73, 0.45);
+	background-color: var(--nhd-delete-chars);
 	border-radius: 2px;
 }
 
@@ -159,7 +180,7 @@ body {
 	padding: 2px 6px;
 	opacity: 0.6;
 	font-style: italic;
-	background-color: rgba(128, 128, 128, 0.08);
+	background-color: var(--nhd-fold);
 }
 
 /* Side-by-side view (F3), shown when the panel is at least 600px wide. */
@@ -182,8 +203,15 @@ body {
 	border-left: 1px solid var(--joplin-divider-color, #ddd);
 }
 
+/* The side with no line: diagonal stripes, readable in both themes. */
 .nhd .sbs .cell.empty {
-	background-color: rgba(128, 128, 128, 0.08);
+	background-image: repeating-linear-gradient(
+		-45deg,
+		var(--nhd-empty-stripe) 0,
+		var(--nhd-empty-stripe) 2px,
+		transparent 2px,
+		transparent 7px
+	);
 }
 
 .nhd .view-unified {
