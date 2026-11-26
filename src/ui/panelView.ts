@@ -39,9 +39,9 @@ interface ResolvedOptions {
 }
 
 function choiceLabel(choice: VersionChoice, strings: Strings, format: DateTimeFormat): string {
-	const name = choice.kind === 'current' ? strings.currentNote : strings.revision(formatDateTime(choice.time, format, strings.locale));
+	const name = choice.kind === 'current' ? strings.currentNote : strings.revision(formatDateTime(choice.time, format, strings.numberLocale));
 	const size = choice.bodyLength === null ? strings.unavailable : strings.chars(choice.bodyLength);
-	return `${name}（${size}）`;
+	return strings.versionLabel(name, size);
 }
 
 // F2: a version picker. Revisions that cannot be rebuilt are listed but disabled.

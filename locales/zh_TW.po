@@ -1,0 +1,159 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: note-history-diff\n"
+"Report-Msgid-Bugs-To: https://github.com/akiratamcat/joplin-plugin-note-history-diff/issues\n"
+"Language: zh_TW\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#: src/ui/i18n.ts:100
+msgid "Comparing the latest revision with the current note."
+msgstr "正在比較最新版本與目前的筆記。"
+
+#: src/ui/i18n.ts:101
+msgid "The note has not changed since the latest revision, so it is compared with the revision before it."
+msgstr "筆記自最新版本以來沒有變更，因此與前一個版本進行比較。"
+
+#: src/ui/i18n.ts:103
+#. Number of lines added and removed in the diff.
+msgid "+{added} / −{removed} lines"
+msgstr "+{added} / −{removed} 行"
+
+#: src/ui/i18n.ts:105
+#. Heading of the diff of the note title.
+msgid "Title"
+msgstr "標題"
+
+#: src/ui/i18n.ts:106
+msgid "Body: no changes"
+msgstr "內文：無變更"
+
+#: src/ui/i18n.ts:108
+#. Shown in place of unchanged lines that are folded away.
+msgid "… {count} unchanged line …"
+msgid_plural "… {count} unchanged lines …"
+msgstr[0] "… {count} 行未變更 …"
+
+#: src/ui/i18n.ts:63
+msgid "Show note history diff"
+msgstr "顯示筆記歷史差異"
+
+#: src/ui/i18n.ts:64
+msgid "Note History Diff works in the main window only. Open the note in the main window to see its history."
+msgstr "Note History Diff 僅能在主視窗中使用。請在主視窗中開啟筆記以查看其歷史。"
+
+#: src/ui/i18n.ts:65
+msgid "Refresh"
+msgstr "重新整理"
+
+#: src/ui/i18n.ts:66
+msgid "Close"
+msgstr "關閉"
+
+#: src/ui/i18n.ts:67
+msgid "Loading note history…"
+msgstr "正在載入筆記歷史…"
+
+#: src/ui/i18n.ts:68
+msgid "Select a note to see its changes."
+msgstr "選擇一則筆記以查看其變更。"
+
+#: src/ui/i18n.ts:69
+msgid "This note has no history yet."
+msgstr "這則筆記還沒有歷史紀錄。"
+
+#: src/ui/i18n.ts:71
+#. {interval} is a number of minutes, {days} a number of days (Joplin's note history settings).
+msgid "Joplin saves a revision when the note is changed at least {interval} minutes after the previous revision, and keeps it for {days} days."
+msgstr "當筆記在前一個版本至少 {interval} 分鐘後被修改時，Joplin 會儲存一個版本，並保留 {days} 天。"
+
+#: src/ui/i18n.ts:72
+msgid "Note history is turned off. You can turn it on in Tools > Options > Note History."
+msgstr "筆記歷史功能已關閉。可以在「工具 > 選項 > 筆記歷史」中開啟。"
+
+#: src/ui/i18n.ts:73
+msgid "The only revision is identical to the current note, so there is nothing to compare yet."
+msgstr "唯一的版本與目前的筆記相同，因此暫時沒有可比較的內容。"
+
+#: src/ui/i18n.ts:74
+msgid "A revision is still encrypted, so its content cannot be rebuilt."
+msgstr "有一個版本仍處於加密狀態，因此無法重建其內容。"
+
+#: src/ui/i18n.ts:76
+#. {reason} is a technical code such as "invalid-patch"; keep it as it is.
+msgid "A revision could not be read ({reason})."
+msgstr "無法讀取某個版本（{reason}）。"
+
+#: src/ui/i18n.ts:78
+#. {message} is an error message, usually in English.
+msgid "Something went wrong: {message}"
+msgstr "發生錯誤：{message}"
+
+#: src/ui/i18n.ts:80
+#. Label of the list of the older version to compare.
+msgid "From"
+msgstr "比較來源"
+
+#: src/ui/i18n.ts:82
+#. Label of the list of the newer version to compare.
+msgid "To"
+msgstr "比較目標"
+
+#: src/ui/i18n.ts:84
+#. A saved revision of the note in the version list. {time} is its date and time.
+msgid "Revision {time}"
+msgstr "版本 {time}"
+
+#: src/ui/i18n.ts:85
+msgid "Current note"
+msgstr "目前的筆記"
+
+#: src/ui/i18n.ts:87
+#. Length of a version in the version list. {count} is a formatted number.
+msgid "{count} char"
+msgid_plural "{count} chars"
+msgstr[0] "{count} 個字元"
+
+#: src/ui/i18n.ts:89
+#. One entry of the version list: {name} is "Revision <date>" or "Current note", {size} its length or "cannot be read".
+msgid "{name} ({size})"
+msgstr "{name}（{size}）"
+
+#: src/ui/i18n.ts:90
+msgid "cannot be read"
+msgstr "無法讀取"
+
+#: src/ui/i18n.ts:91
+msgid "The same version is selected on both sides."
+msgstr "兩側選擇了同一個版本。"
+
+#: src/ui/i18n.ts:92
+msgid "Side by side"
+msgstr "並排"
+
+#: src/ui/i18n.ts:94
+#. The one-column layout of the diff.
+msgid "Unified"
+msgstr "單欄"
+
+#: src/ui/i18n.ts:95
+msgid "◀ Older pair"
+msgstr "◀ 較早的一對"
+
+#: src/ui/i18n.ts:96
+msgid "Newer pair ▶"
+msgstr "較新的一對 ▶"
+
+#: src/ui/i18n.ts:97
+msgid "↑ Previous change"
+msgstr "↑ 上一處變更"
+
+#: src/ui/i18n.ts:98
+msgid "↓ Next change"
+msgstr "↓ 下一處變更"
+
+#: src/ui/i18n.ts:99
+msgid "Ignore trailing spaces and line endings"
+msgstr "忽略行尾空白與換行字元的差異"

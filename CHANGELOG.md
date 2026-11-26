@@ -26,7 +26,7 @@ First release.
 - Highlight of the changed characters inside a changed line, and a separate diff of the title.
 - Option to ignore trailing spaces and line ending differences (on by default).
 - Colours for the light and dark themes. Dates follow Joplin's date and time formats.
-- English and Japanese user interface.
+- User interface in 11 languages, translated with gettext: English, Japanese, Chinese (Simplified and Traditional), Korean, German, French, Spanish, Italian, Portuguese (Brazil) and Russian.
 
 [Unreleased]: https://github.com/akiratamcat/joplin-plugin-note-history-diff/compare/v1.0.0...HEAD
 [1.0.0]: https://github.com/akiratamcat/joplin-plugin-note-history-diff/releases/tag/v1.0.0

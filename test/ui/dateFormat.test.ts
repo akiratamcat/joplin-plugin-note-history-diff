@@ -35,6 +35,6 @@ describe('formatDateTime', () => {
 	});
 
 	test('falls back to the locale format when a setting is unknown', () => {
-		expect(formatDateTime(evening, { date: null, time: 'HH:mm' }, 'en')).toBe(new Date(evening).toLocaleString());
+		expect(formatDateTime(evening, { date: null, time: 'HH:mm' }, undefined)).toBe(new Date(evening).toLocaleString());
 	});
 });

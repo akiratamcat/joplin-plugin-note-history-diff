@@ -27,7 +27,7 @@ Joplin keeps a history of your notes, but its note history view shows one revisi
 - **Ignore whitespace**: differences in trailing spaces and line endings are ignored by default (a checkbox turns this off).
 - **Title changes** are shown above the body.
 - **Read only**: the plugin never changes your notes or their history.
-- English and Japanese user interface. Dates follow your Joplin date and time formats.
+- The user interface is translated with gettext and follows Joplin's display language. Supported languages (11): English, Japanese, Chinese (Simplified and Traditional), Korean, German, French, Spanish, Italian, Portuguese (Brazil) and Russian. Dates follow your Joplin date and time formats.
 
 ## Installation
 
@@ -109,7 +109,7 @@ Joplin はノートの履歴を保存していますが、本体の「ノート�
 - **空白の違いを無視**：行末の空白と改行コードの違いは、最初は差分に出しません（チェックボックスで切り替え）。
 - **タイトルの変更**も、本文の上に表示します。
 - **読み取り専用**：ノートとその履歴を書き換えることはありません。
-- 画面は英語と日本語に対応しています。日時は Joplin の「日付の形式」「時刻の形式」に従います。
+- 画面の文言は gettext で翻訳しており、Joplin の表示言語に従います。対応している言語（11）：英語、日本語、中国語（簡体字・繁体字）、韓国語、ドイツ語、フランス語、スペイン語、イタリア語、ポルトガル語（ブラジル）、ロシア語。日時は Joplin の「日付の形式」「時刻の形式」に従います。
 
 ### インストール
 

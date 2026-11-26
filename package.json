@@ -8,9 +8,12 @@
   },
   "author": "akiratamcat",
   "scripts": {
-    "test": "node scripts/readme.mjs --check && jest",
+    "test": "npm run i18n:compile && npm run i18n:check && node scripts/readme.mjs --check && jest",
     "readme": "node scripts/readme.mjs",
-    "dist": "webpack --env joplin-plugin-config=buildMain && webpack --env joplin-plugin-config=buildExtraScripts && webpack --env joplin-plugin-config=createArchive",
+    "i18n:extract": "node scripts/i18n-extract.mjs",
+    "i18n:compile": "node scripts/i18n-compile.mjs",
+    "i18n:check": "node scripts/i18n-check.mjs",
+    "dist": "npm run i18n:compile && webpack --env joplin-plugin-config=buildMain && webpack --env joplin-plugin-config=buildExtraScripts && webpack --env joplin-plugin-config=createArchive",
     "prepare": "npm run dist",
     "updateVersion": "webpack --env joplin-plugin-config=updateVersion",
     "update": "npm install -g generator-joplin && yo joplin --node-package-manager npm --update --force"
@@ -29,6 +32,7 @@
     "chalk": "^4.1.0",
     "copy-webpack-plugin": "^11.0.0",
     "fs-extra": "^10.1.0",
+    "gettext-parser": "9.1.1",
     "glob": "^8.0.3",
     "jest": "^29.7.0",
     "tar": "^6.1.11",

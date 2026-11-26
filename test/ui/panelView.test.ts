@@ -6,11 +6,28 @@ const ja = stringsFor('ja_JP');
 const en = stringsFor('en_GB');
 
 describe('stringsFor', () => {
-	test('picks Japanese for ja locales and English otherwise', () => {
+	test('follows the Joplin language, with English for the others', () => {
 		expect(stringsFor('ja_JP').locale).toBe('ja');
 		expect(stringsFor('ja').locale).toBe('ja');
-		expect(stringsFor('fr_FR').locale).toBe('en');
+		expect(stringsFor('fr_FR').locale).toBe('fr');
+		expect(stringsFor('pt_PT').locale).toBe('pt_BR');
+		expect(stringsFor('zh_HK').locale).toBe('zh_TW');
+		expect(stringsFor('nl_NL').locale).toBe('en');
 		expect(stringsFor(null).locale).toBe('en');
+	});
+
+	test('every supported language is translated (gettext catalogs)', () => {
+		const en = stringsFor('en');
+		for (const locale of ['ja', 'zh_CN', 'zh_TW', 'ko', 'de', 'fr', 'es', 'pt_BR', 'it', 'ru']) {
+			const strings = stringsFor(locale);
+			expect(strings.refresh).not.toBe(en.refresh);
+			expect(strings.commandLabel).not.toBe(en.commandLabel);
+		}
+		expect(stringsFor('de').foldedLines(1)).toBe('… 1 unveränderte Zeile …');
+		expect(stringsFor('de').foldedLines(2)).toBe('… 2 unveränderte Zeilen …');
+		expect(stringsFor('ru').chars(5)).toBe('5 символов');
+		expect(stringsFor('ja').chars(1234)).toBe('1,234 文字');
+		expect(en.chars(1)).toBe('1 char');
 	});
 });
 
@@ -78,7 +95,7 @@ describe('renderPanel', () => {
 		const html = result(diff, 'rev-2', CURRENT_KEY, null);
 		expect(html).toContain('data-select="from"');
 		expect(html).toContain('data-select="to"');
-		expect(html).toContain('<option value="current" selected>Current note（1,234 chars）</option>');
+		expect(html).toContain('<option value="current" selected>Current note (1,234 chars)</option>');
 		expect(html).toContain('<option value="rev-2" selected>');
 		expect(html).toContain('<option value="rev-1" disabled>');
 		expect(html).toContain('cannot be read');

@@ -1,0 +1,159 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: note-history-diff\n"
+"Report-Msgid-Bugs-To: https://github.com/akiratamcat/joplin-plugin-note-history-diff/issues\n"
+"Language: ko\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#: src/ui/i18n.ts:100
+msgid "Comparing the latest revision with the current note."
+msgstr "최신 버전과 현재 노트를 비교하고 있습니다."
+
+#: src/ui/i18n.ts:101
+msgid "The note has not changed since the latest revision, so it is compared with the revision before it."
+msgstr "최신 버전 이후 노트가 변경되지 않았으므로 그 이전 버전과 비교합니다."
+
+#: src/ui/i18n.ts:103
+#. Number of lines added and removed in the diff.
+msgid "+{added} / −{removed} lines"
+msgstr "+{added} / −{removed}줄"
+
+#: src/ui/i18n.ts:105
+#. Heading of the diff of the note title.
+msgid "Title"
+msgstr "제목"
+
+#: src/ui/i18n.ts:106
+msgid "Body: no changes"
+msgstr "본문: 변경 없음"
+
+#: src/ui/i18n.ts:108
+#. Shown in place of unchanged lines that are folded away.
+msgid "… {count} unchanged line …"
+msgid_plural "… {count} unchanged lines …"
+msgstr[0] "… 변경되지 않은 {count}줄 …"
+
+#: src/ui/i18n.ts:63
+msgid "Show note history diff"
+msgstr "노트 기록 차이 보기"
+
+#: src/ui/i18n.ts:64
+msgid "Note History Diff works in the main window only. Open the note in the main window to see its history."
+msgstr "Note History Diff는 기본 창에서만 사용할 수 있습니다. 기록을 보려면 노트를 기본 창에서 여세요."
+
+#: src/ui/i18n.ts:65
+msgid "Refresh"
+msgstr "새로 고침"
+
+#: src/ui/i18n.ts:66
+msgid "Close"
+msgstr "닫기"
+
+#: src/ui/i18n.ts:67
+msgid "Loading note history…"
+msgstr "노트 기록을 불러오는 중…"
+
+#: src/ui/i18n.ts:68
+msgid "Select a note to see its changes."
+msgstr "노트를 선택하면 변경 사항을 보여 줍니다."
+
+#: src/ui/i18n.ts:69
+msgid "This note has no history yet."
+msgstr "이 노트에는 아직 기록이 없습니다."
+
+#: src/ui/i18n.ts:71
+#. {interval} is a number of minutes, {days} a number of days (Joplin's note history settings).
+msgid "Joplin saves a revision when the note is changed at least {interval} minutes after the previous revision, and keeps it for {days} days."
+msgstr "Joplin은 이전 버전으로부터 {interval}분 이상 지난 뒤 노트가 변경되면 버전을 저장하고 {days}일 동안 보관합니다."
+
+#: src/ui/i18n.ts:72
+msgid "Note history is turned off. You can turn it on in Tools > Options > Note History."
+msgstr "노트 기록 기능이 꺼져 있습니다. 도구 > 옵션 > 노트 기록에서 켤 수 있습니다."
+
+#: src/ui/i18n.ts:73
+msgid "The only revision is identical to the current note, so there is nothing to compare yet."
+msgstr "버전이 하나뿐이고 현재 노트와 같으므로 아직 비교할 것이 없습니다."
+
+#: src/ui/i18n.ts:74
+msgid "A revision is still encrypted, so its content cannot be rebuilt."
+msgstr "아직 암호화된 버전이 있어 내용을 다시 구성할 수 없습니다."
+
+#: src/ui/i18n.ts:76
+#. {reason} is a technical code such as "invalid-patch"; keep it as it is.
+msgid "A revision could not be read ({reason})."
+msgstr "버전을 읽을 수 없습니다({reason})."
+
+#: src/ui/i18n.ts:78
+#. {message} is an error message, usually in English.
+msgid "Something went wrong: {message}"
+msgstr "문제가 발생했습니다: {message}"
+
+#: src/ui/i18n.ts:80
+#. Label of the list of the older version to compare.
+msgid "From"
+msgstr "비교 원본"
+
+#: src/ui/i18n.ts:82
+#. Label of the list of the newer version to compare.
+msgid "To"
+msgstr "비교 대상"
+
+#: src/ui/i18n.ts:84
+#. A saved revision of the note in the version list. {time} is its date and time.
+msgid "Revision {time}"
+msgstr "버전 {time}"
+
+#: src/ui/i18n.ts:85
+msgid "Current note"
+msgstr "현재 노트"
+
+#: src/ui/i18n.ts:87
+#. Length of a version in the version list. {count} is a formatted number.
+msgid "{count} char"
+msgid_plural "{count} chars"
+msgstr[0] "{count}자"
+
+#: src/ui/i18n.ts:89
+#. One entry of the version list: {name} is "Revision <date>" or "Current note", {size} its length or "cannot be read".
+msgid "{name} ({size})"
+msgstr "{name} ({size})"
+
+#: src/ui/i18n.ts:90
+msgid "cannot be read"
+msgstr "읽을 수 없음"
+
+#: src/ui/i18n.ts:91
+msgid "The same version is selected on both sides."
+msgstr "양쪽에 같은 버전을 선택했습니다."
+
+#: src/ui/i18n.ts:92
+msgid "Side by side"
+msgstr "나란히"
+
+#: src/ui/i18n.ts:94
+#. The one-column layout of the diff.
+msgid "Unified"
+msgstr "한 열"
+
+#: src/ui/i18n.ts:95
+msgid "◀ Older pair"
+msgstr "◀ 이전 버전 쌍"
+
+#: src/ui/i18n.ts:96
+msgid "Newer pair ▶"
+msgstr "다음 버전 쌍 ▶"
+
+#: src/ui/i18n.ts:97
+msgid "↑ Previous change"
+msgstr "↑ 이전 변경"
+
+#: src/ui/i18n.ts:98
+msgid "↓ Next change"
+msgstr "↓ 다음 변경"
+
+#: src/ui/i18n.ts:99
+msgid "Ignore trailing spaces and line endings"
+msgstr "줄 끝 공백과 줄 바꿈 문자 차이 무시"

@@ -25,7 +25,7 @@
 - 変わった行の中で、変わった文字を強調する。タイトルの差分も別に表示する。
 - 行末の空白と改行コードの違いを無視する設定（初期値は有効）。
 - 明るいテーマと暗いテーマに合わせた色。日時は Joplin の「日付の形式」「時刻の形式」に従う。
-- 英語と日本語の画面。
+- 11 言語の画面（gettext で翻訳）：英語、日本語、中国語（簡体字・繁体字）、韓国語、ドイツ語、フランス語、スペイン語、イタリア語、ポルトガル語（ブラジル）、ロシア語。
 
 [Unreleased]: https://github.com/akiratamcat/joplin-plugin-note-history-diff/compare/v1.0.0...HEAD
 [1.0.0]: https://github.com/akiratamcat/joplin-plugin-note-history-diff/releases/tag/v1.0.0

@@ -33,10 +33,12 @@ npm run dist    # プラグインのファイル（.jpl）を publish/ に作る
 | `src/history/` | 版の索引、差分の適用、チェックポイントを使った版の組み立て、キャッシュ |
 | `src/diff/` | 行単位の差分、文字単位の差分、空白の扱い |
 | `src/core/` | 比べる版の決め方、版の一覧、隣り合う版の組 |
-| `src/ui/` | 画面の描画、差分の表示、画面の文言（英語・日本語）、日時の形式、webview のスクリプトとスタイル |
+| `src/ui/` | 画面の描画、差分の表示、画面の文言（gettext）、日時の形式、webview のスクリプトとスタイル |
 | `src/editorViewController.ts` | エディタの場所に表示するビュー、コマンド、ツールバーのボタン、設定 |
 | `test/` | 単体テストとテスト用のファイル |
-| `scripts/` | `readme.mjs`（README.md の日本語部分を作る）、`make-test-notes.mjs`（テスト用のファイルを作る） |
+| `src/i18n/` | gettext の実装（`gettext.ts`）と、まとめた翻訳 |
+| `locales/` | 翻訳（`.po`）とひな形（`.pot`） |
+| `scripts/` | `readme.mjs`（README.md の日本語部分を作る）、`i18n-*.mjs`（翻訳）、`make-test-notes.mjs`（テスト用のファイルを作る） |
 
 ## 英語と日本語の文書
 
@@ -44,7 +46,15 @@ npm run dist    # プラグインのファイル（.jpl）を publish/ に作る
 
 `README.md` の日本語部分は `README.ja.md` から作ります。`README.ja.md` を直してから `npm run readme` を実行してください。`README.md` が古いままだと `npm test` が失敗します。
 
-画面の文言は `src/ui/i18n.ts`（英語と日本語）にあります。
+## 翻訳
+
+画面の文言は gettext で翻訳しています。英語の文言はソース（`src/ui/i18n.ts` の `t._('...')` と `t.ngettext(...)`）にあり、翻訳は `locales/<locale>.po` にあります。ビルドのときに `src/i18n/catalog/catalogs.json` にまとめます（このファイルはコミットしません）。
+
+- `npm run i18n:extract`：ソースから `locales/note-history-diff.pot` とすべての `.po` ファイルを更新します。今ある翻訳は残します。
+- `npm run i18n:compile`：翻訳をまとめます（`npm test` と `npm run dist` でも実行されます）。
+- `npm run i18n:check`：訳の抜けや余り、複数形の数の誤り、`{count}` などの差し込み部分が英語と食い違うものがあると失敗します（`npm test` でも実行されます）。
+
+翻訳を直したり足したりするときは、PO エディタかテキストエディタで `.po` ファイルを編集してください。訳のない文言は英語で表示されます。言語を増やすときは、`scripts/i18n-common.mjs` と `src/i18n/gettext.ts` に加えてから `npm run i18n:extract` を実行してください。
 
 ## プルリクエスト
 

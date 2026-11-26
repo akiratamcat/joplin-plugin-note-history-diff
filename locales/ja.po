@@ -1,0 +1,159 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: note-history-diff\n"
+"Report-Msgid-Bugs-To: https://github.com/akiratamcat/joplin-plugin-note-history-diff/issues\n"
+"Language: ja\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+#: src/ui/i18n.ts:100
+msgid "Comparing the latest revision with the current note."
+msgstr "最新の版と現在のノートを比べています。"
+
+#: src/ui/i18n.ts:101
+msgid "The note has not changed since the latest revision, so it is compared with the revision before it."
+msgstr "最新の版から変更がないため、その 1 つ前の版と比べています。"
+
+#: src/ui/i18n.ts:103
+#. Number of lines added and removed in the diff.
+msgid "+{added} / −{removed} lines"
+msgstr "+{added} / −{removed} 行"
+
+#: src/ui/i18n.ts:105
+#. Heading of the diff of the note title.
+msgid "Title"
+msgstr "タイトル"
+
+#: src/ui/i18n.ts:106
+msgid "Body: no changes"
+msgstr "本文は変更なし"
+
+#: src/ui/i18n.ts:108
+#. Shown in place of unchanged lines that are folded away.
+msgid "… {count} unchanged line …"
+msgid_plural "… {count} unchanged lines …"
+msgstr[0] "… 変更のない {count} 行 …"
+
+#: src/ui/i18n.ts:63
+msgid "Show note history diff"
+msgstr "ノート履歴の差分を表示"
+
+#: src/ui/i18n.ts:64
+msgid "Note History Diff works in the main window only. Open the note in the main window to see its history."
+msgstr "Note History Diff はメインウィンドウでだけ使えます。履歴を見るには、ノートをメインウィンドウで開いてください。"
+
+#: src/ui/i18n.ts:65
+msgid "Refresh"
+msgstr "更新"
+
+#: src/ui/i18n.ts:66
+msgid "Close"
+msgstr "閉じる"
+
+#: src/ui/i18n.ts:67
+msgid "Loading note history…"
+msgstr "ノートの履歴を読み込んでいます…"
+
+#: src/ui/i18n.ts:68
+msgid "Select a note to see its changes."
+msgstr "ノートを選ぶと、変更点を表示します。"
+
+#: src/ui/i18n.ts:69
+msgid "This note has no history yet."
+msgstr "このノートには履歴がありません。"
+
+#: src/ui/i18n.ts:71
+#. {interval} is a number of minutes, {days} a number of days (Joplin's note history settings).
+msgid "Joplin saves a revision when the note is changed at least {interval} minutes after the previous revision, and keeps it for {days} days."
+msgstr "履歴（版）は、前の版から {interval} 分以上たってノートが保存されたときに作られ、{days} 日間保存されます。"
+
+#: src/ui/i18n.ts:72
+msgid "Note history is turned off. You can turn it on in Tools > Options > Note History."
+msgstr "ノート履歴の機能が無効になっています。「ツール」→「オプション」→「ノート履歴」で有効にできます。"
+
+#: src/ui/i18n.ts:73
+msgid "The only revision is identical to the current note, so there is nothing to compare yet."
+msgstr "版は 1 件だけで、今のノートと同じ内容です。まだ比べるものがありません。"
+
+#: src/ui/i18n.ts:74
+msgid "A revision is still encrypted, so its content cannot be rebuilt."
+msgstr "暗号化されたままの版があるため、内容を組み立てられません。"
+
+#: src/ui/i18n.ts:76
+#. {reason} is a technical code such as "invalid-patch"; keep it as it is.
+msgid "A revision could not be read ({reason})."
+msgstr "版を読み込めませんでした（{reason}）。"
+
+#: src/ui/i18n.ts:78
+#. {message} is an error message, usually in English.
+msgid "Something went wrong: {message}"
+msgstr "エラーが発生しました：{message}"
+
+#: src/ui/i18n.ts:80
+#. Label of the list of the older version to compare.
+msgid "From"
+msgstr "比較元"
+
+#: src/ui/i18n.ts:82
+#. Label of the list of the newer version to compare.
+msgid "To"
+msgstr "比較先"
+
+#: src/ui/i18n.ts:84
+#. A saved revision of the note in the version list. {time} is its date and time.
+msgid "Revision {time}"
+msgstr "版 {time}"
+
+#: src/ui/i18n.ts:85
+msgid "Current note"
+msgstr "現在のノート"
+
+#: src/ui/i18n.ts:87
+#. Length of a version in the version list. {count} is a formatted number.
+msgid "{count} char"
+msgid_plural "{count} chars"
+msgstr[0] "{count} 文字"
+
+#: src/ui/i18n.ts:89
+#. One entry of the version list: {name} is "Revision <date>" or "Current note", {size} its length or "cannot be read".
+msgid "{name} ({size})"
+msgstr "{name}（{size}）"
+
+#: src/ui/i18n.ts:90
+msgid "cannot be read"
+msgstr "読み込めません"
+
+#: src/ui/i18n.ts:91
+msgid "The same version is selected on both sides."
+msgstr "比較元と比較先に同じ版を選んでいます。"
+
+#: src/ui/i18n.ts:92
+msgid "Side by side"
+msgstr "横並び"
+
+#: src/ui/i18n.ts:94
+#. The one-column layout of the diff.
+msgid "Unified"
+msgstr "1 列"
+
+#: src/ui/i18n.ts:95
+msgid "◀ Older pair"
+msgstr "◀ 前の版ペア"
+
+#: src/ui/i18n.ts:96
+msgid "Newer pair ▶"
+msgstr "次の版ペア ▶"
+
+#: src/ui/i18n.ts:97
+msgid "↑ Previous change"
+msgstr "↑ 前の変更"
+
+#: src/ui/i18n.ts:98
+msgid "↓ Next change"
+msgstr "↓ 次の変更"
+
+#: src/ui/i18n.ts:99
+msgid "Ignore trailing spaces and line endings"
+msgstr "行末の空白と改行コードの違いを無視"

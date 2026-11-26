@@ -37,9 +37,9 @@ export function formatWithPattern(ms: number, pattern: string): string {
 	});
 }
 
-// Date and time in Joplin's formats; falls back to the locale's format when
-// the settings could not be read.
-export function formatDateTime(ms: number, format: DateTimeFormat, locale: string): string {
-	if (!format.date || !format.time) return new Date(ms).toLocaleString(locale === 'ja' ? 'ja-JP' : undefined);
+// Date and time in Joplin's formats; falls back to the format of `locale`
+// (a BCP 47 tag; undefined: the system's) when the settings could not be read.
+export function formatDateTime(ms: number, format: DateTimeFormat, locale: string | undefined): string {
+	if (!format.date || !format.time) return new Date(ms).toLocaleString(locale);
 	return `${formatWithPattern(ms, format.date)} ${formatWithPattern(ms, format.time)}`;
 }

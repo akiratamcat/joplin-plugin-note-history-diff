@@ -1,0 +1,163 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: note-history-diff\n"
+"Report-Msgid-Bugs-To: https://github.com/akiratamcat/joplin-plugin-note-history-diff/issues\n"
+"Language: ru\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+
+#: src/ui/i18n.ts:100
+msgid "Comparing the latest revision with the current note."
+msgstr "Сравнивается последняя версия с текущей заметкой."
+
+#: src/ui/i18n.ts:101
+msgid "The note has not changed since the latest revision, so it is compared with the revision before it."
+msgstr "Заметка не менялась с последней версии, поэтому она сравнивается с предыдущей версией."
+
+#: src/ui/i18n.ts:103
+#. Number of lines added and removed in the diff.
+msgid "+{added} / −{removed} lines"
+msgstr "+{added} / −{removed} строк"
+
+#: src/ui/i18n.ts:105
+#. Heading of the diff of the note title.
+msgid "Title"
+msgstr "Заголовок"
+
+#: src/ui/i18n.ts:106
+msgid "Body: no changes"
+msgstr "Текст: без изменений"
+
+#: src/ui/i18n.ts:108
+#. Shown in place of unchanged lines that are folded away.
+msgid "… {count} unchanged line …"
+msgid_plural "… {count} unchanged lines …"
+msgstr[0] "… {count} неизменённая строка …"
+msgstr[1] "… {count} неизменённые строки …"
+msgstr[2] "… {count} неизменённых строк …"
+
+#: src/ui/i18n.ts:63
+msgid "Show note history diff"
+msgstr "Показать различия в истории заметки"
+
+#: src/ui/i18n.ts:64
+msgid "Note History Diff works in the main window only. Open the note in the main window to see its history."
+msgstr "Note History Diff работает только в главном окне. Откройте заметку в главном окне, чтобы увидеть её историю."
+
+#: src/ui/i18n.ts:65
+msgid "Refresh"
+msgstr "Обновить"
+
+#: src/ui/i18n.ts:66
+msgid "Close"
+msgstr "Закрыть"
+
+#: src/ui/i18n.ts:67
+msgid "Loading note history…"
+msgstr "Загрузка истории заметки…"
+
+#: src/ui/i18n.ts:68
+msgid "Select a note to see its changes."
+msgstr "Выберите заметку, чтобы увидеть её изменения."
+
+#: src/ui/i18n.ts:69
+msgid "This note has no history yet."
+msgstr "У этой заметки пока нет истории."
+
+#: src/ui/i18n.ts:71
+#. {interval} is a number of minutes, {days} a number of days (Joplin's note history settings).
+msgid "Joplin saves a revision when the note is changed at least {interval} minutes after the previous revision, and keeps it for {days} days."
+msgstr "Joplin сохраняет версию, когда заметка изменена не раньше чем через {interval} мин. после предыдущей версии, и хранит её {days} дн."
+
+#: src/ui/i18n.ts:72
+msgid "Note history is turned off. You can turn it on in Tools > Options > Note History."
+msgstr "История заметок отключена. Её можно включить в меню Инструменты > Настройки > История заметок."
+
+#: src/ui/i18n.ts:73
+msgid "The only revision is identical to the current note, so there is nothing to compare yet."
+msgstr "Единственная версия совпадает с текущей заметкой, поэтому сравнивать пока нечего."
+
+#: src/ui/i18n.ts:74
+msgid "A revision is still encrypted, so its content cannot be rebuilt."
+msgstr "Одна из версий ещё зашифрована, поэтому её содержимое нельзя восстановить."
+
+#: src/ui/i18n.ts:76
+#. {reason} is a technical code such as "invalid-patch"; keep it as it is.
+msgid "A revision could not be read ({reason})."
+msgstr "Не удалось прочитать версию ({reason})."
+
+#: src/ui/i18n.ts:78
+#. {message} is an error message, usually in English.
+msgid "Something went wrong: {message}"
+msgstr "Произошла ошибка: {message}"
+
+#: src/ui/i18n.ts:80
+#. Label of the list of the older version to compare.
+msgid "From"
+msgstr "Из"
+
+#: src/ui/i18n.ts:82
+#. Label of the list of the newer version to compare.
+msgid "To"
+msgstr "В"
+
+#: src/ui/i18n.ts:84
+#. A saved revision of the note in the version list. {time} is its date and time.
+msgid "Revision {time}"
+msgstr "Версия {time}"
+
+#: src/ui/i18n.ts:85
+msgid "Current note"
+msgstr "Текущая заметка"
+
+#: src/ui/i18n.ts:87
+#. Length of a version in the version list. {count} is a formatted number.
+msgid "{count} char"
+msgid_plural "{count} chars"
+msgstr[0] "{count} символ"
+msgstr[1] "{count} символа"
+msgstr[2] "{count} символов"
+
+#: src/ui/i18n.ts:89
+#. One entry of the version list: {name} is "Revision <date>" or "Current note", {size} its length or "cannot be read".
+msgid "{name} ({size})"
+msgstr "{name} ({size})"
+
+#: src/ui/i18n.ts:90
+msgid "cannot be read"
+msgstr "не читается"
+
+#: src/ui/i18n.ts:91
+msgid "The same version is selected on both sides."
+msgstr "С обеих сторон выбрана одна и та же версия."
+
+#: src/ui/i18n.ts:92
+msgid "Side by side"
+msgstr "Рядом"
+
+#: src/ui/i18n.ts:94
+#. The one-column layout of the diff.
+msgid "Unified"
+msgstr "Одна колонка"
+
+#: src/ui/i18n.ts:95
+msgid "◀ Older pair"
+msgstr "◀ Предыдущая пара"
+
+#: src/ui/i18n.ts:96
+msgid "Newer pair ▶"
+msgstr "Следующая пара ▶"
+
+#: src/ui/i18n.ts:97
+msgid "↑ Previous change"
+msgstr "↑ Предыдущее изменение"
+
+#: src/ui/i18n.ts:98
+msgid "↓ Next change"
+msgstr "↓ Следующее изменение"
+
+#: src/ui/i18n.ts:99
+msgid "Ignore trailing spaces and line endings"
+msgstr "Игнорировать пробелы в конце строк и символы перевода строки"

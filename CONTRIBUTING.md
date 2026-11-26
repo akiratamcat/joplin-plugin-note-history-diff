@@ -33,10 +33,12 @@ The unit tests cover the code that does not depend on the Joplin API. How the vi
 | `src/history/` | Revision index, patch handling, version rebuilding with checkpoints, cache |
 | `src/diff/` | Line diff, character diff, whitespace handling |
 | `src/core/` | Which versions to compare, version choices, neighbouring pairs |
-| `src/ui/` | View rendering, diff views, UI strings (English / Japanese), date formats, webview script and style |
+| `src/ui/` | View rendering, diff views, UI strings (gettext), date formats, webview script and style |
 | `src/editorViewController.ts` | Editor view in the editor area, commands, toolbar button, settings |
 | `test/` | Unit tests and test fixtures |
-| `scripts/` | `readme.mjs` (builds the Japanese half of README.md), `make-test-notes.mjs` (builds the test fixtures) |
+| `src/i18n/` | gettext implementation (`gettext.ts`) and the compiled catalogs |
+| `locales/` | Translations (`.po`) and the template (`.pot`) |
+| `scripts/` | `readme.mjs` (builds the Japanese half of README.md), `i18n-*.mjs` (translations), `make-test-notes.mjs` (builds the test fixtures) |
 
 ## Documents in two languages
 
@@ -44,7 +46,15 @@ User-facing documents have an English and a Japanese version with the same conte
 
 The Japanese half of `README.md` is generated from `README.ja.md`: edit `README.ja.md`, then run `npm run readme`. `npm test` fails when `README.md` is out of date.
 
-The user interface strings are in `src/ui/i18n.ts` (English and Japanese).
+## Translations
+
+The user interface is translated with gettext. The English texts are in the source (`src/ui/i18n.ts`, as `t._('...')` and `t.ngettext(...)`), and the translations are in `locales/<locale>.po`, compiled into `src/i18n/catalog/catalogs.json` at build time (not committed).
+
+- `npm run i18n:extract`: updates `locales/note-history-diff.pot` and every `.po` file from the source. Existing translations are kept.
+- `npm run i18n:compile`: builds the catalogs (run by `npm test` and `npm run dist`).
+- `npm run i18n:check`: fails on missing or extra entries, wrong plural forms, or placeholders such as `{count}` that differ from the English text (run by `npm test`).
+
+To fix or add a translation, edit the `.po` file with any PO editor or a text editor. Untranslated texts are shown in English. To add a language, add it to `scripts/i18n-common.mjs` and `src/i18n/gettext.ts`, then run `npm run i18n:extract`.
 
 ## Pull requests
 

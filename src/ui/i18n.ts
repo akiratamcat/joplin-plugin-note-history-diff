@@ -1,8 +1,18 @@
-// UI strings in English and Japanese (spec section 6). The language follows
-// Joplin's `locale` setting; anything other than Japanese falls back to English.
+// UI strings (spec section 6). The texts are English in the source and are
+// translated with gettext: locales/<locale>.po, compiled into
+// src/i18n/catalog/catalogs.json (npm run i18n:compile). The language follows
+// Joplin's `locale` setting; untranslated texts and unsupported languages stay
+// in English. To change a text: edit it here, run npm run i18n:extract, then
+// translate the new entries in every locales/*.po file.
+
+import catalogs from '../i18n/catalog/catalogs.json';
+import { Catalog, resolveLocale, Translator } from '../i18n/gettext';
 
 export interface Strings {
+	// Locale of the translation, e.g. "en", "ja", "pt_BR".
 	locale: string;
+	// BCP 47 tag for number and date formatting, e.g. "pt-BR"; undefined for English.
+	numberLocale: string | undefined;
 	panelTitle: string;
 	commandLabel: string;
 	mainWindowOnly: string;
@@ -22,6 +32,7 @@ export interface Strings {
 	revision: (time: string) => string;
 	currentNote: string;
 	chars: (count: number) => string;
+	versionLabel: (name: string, size: string) => string;
 	unavailable: string;
 	sameVersion: string;
 	modeSideBySide: string;
@@ -39,84 +50,61 @@ export interface Strings {
 	foldedLines: (count: number) => string;
 }
 
-const en: Strings = {
-	locale: 'en',
-	panelTitle: 'Note History Diff',
-	commandLabel: 'Show note history diff',
-	mainWindowOnly: 'Note History Diff works in the main window only. Open the note in the main window to see its history.',
-	refresh: 'Refresh',
-	close: 'Close',
-	loading: 'Loading note history…',
-	noNote: 'Select a note to see its changes.',
-	noHistory: 'This note has no history yet.',
-	historyHint: (interval, days) =>
-		`Joplin saves a revision when the note is changed at least ${interval} minutes after the previous revision, and keeps it for ${days} days.`,
-	historyDisabled: 'Note history is turned off. You can turn it on in Tools > Options > Note History.',
-	nothingToCompare: 'The only revision is identical to the current note, so there is nothing to compare yet.',
-	encrypted: 'A revision is still encrypted, so its content cannot be rebuilt.',
-	rebuildFailed: reason => `A revision could not be read (${reason}).`,
-	error: message => `Something went wrong: ${message}`,
-	from: 'From',
-	to: 'To',
-	revision: time => `Revision ${time}`,
-	currentNote: 'Current note',
-	chars: count => `${count.toLocaleString('en')} chars`,
-	unavailable: 'cannot be read',
-	sameVersion: 'The same version is selected on both sides.',
-	modeSideBySide: 'Side by side',
-	modeUnified: 'Unified',
-	olderPair: '◀ Older pair',
-	newerPair: 'Newer pair ▶',
-	previousChange: '↑ Previous change',
-	nextChange: '↓ Next change',
-	ignoreWhitespace: 'Ignore trailing spaces and line endings',
-	latestVsCurrent: 'Comparing the latest revision with the current note.',
-	previousVsLatest: 'The note has not changed since the latest revision, so it is compared with the revision before it.',
-	lineStats: (added, removed) => `+${added} / −${removed} lines`,
-	title: 'Title',
-	bodyUnchanged: 'Body: no changes',
-	foldedLines: count => `… ${count} unchanged line${count === 1 ? '' : 's'} …`,
-};
-
-const ja: Strings = {
-	locale: 'ja',
-	panelTitle: 'Note History Diff',
-	commandLabel: 'ノート履歴の差分を表示',
-	mainWindowOnly: 'Note History Diff はメインウィンドウでだけ使えます。履歴を見るには、ノートをメインウィンドウで開いてください。',
-	refresh: '更新',
-	close: '閉じる',
-	loading: 'ノートの履歴を読み込んでいます…',
-	noNote: 'ノートを選ぶと、変更点を表示します。',
-	noHistory: 'このノートには履歴がありません。',
-	historyHint: (interval, days) =>
-		`履歴（版）は、前の版から ${interval} 分以上たってノートが保存されたときに作られ、${days} 日間保存されます。`,
-	historyDisabled: 'ノート履歴の機能が無効になっています。「ツール」→「オプション」→「ノート履歴」で有効にできます。',
-	nothingToCompare: '版は 1 件だけで、今のノートと同じ内容です。まだ比べるものがありません。',
-	encrypted: '暗号化されたままの版があるため、内容を組み立てられません。',
-	rebuildFailed: reason => `版を読み込めませんでした（${reason}）。`,
-	error: message => `エラーが発生しました：${message}`,
-	from: '比較元',
-	to: '比較先',
-	revision: time => `版 ${time}`,
-	currentNote: '現在のノート',
-	chars: count => `${count.toLocaleString('ja')} 文字`,
-	unavailable: '読み込めません',
-	sameVersion: '比較元と比較先に同じ版を選んでいます。',
-	modeSideBySide: '横並び',
-	modeUnified: '1 列',
-	olderPair: '◀ 前の版ペア',
-	newerPair: '次の版ペア ▶',
-	previousChange: '↑ 前の変更',
-	nextChange: '↓ 次の変更',
-	ignoreWhitespace: '行末の空白と改行コードの違いを無視',
-	latestVsCurrent: '最新の版と現在のノートを比べています。',
-	previousVsLatest: '最新の版から変更がないため、その 1 つ前の版と比べています。',
-	lineStats: (added, removed) => `+${added} / −${removed} 行`,
-	title: 'タイトル',
-	bodyUnchanged: '本文は変更なし',
-	foldedLines: count => `… 変更のない ${count} 行 …`,
-};
-
-export function stringsFor(locale: string | null | undefined): Strings {
-	return locale && locale.toLowerCase().startsWith('ja') ? ja : en;
+export function stringsFor(joplinLocale: string | null | undefined): Strings {
+	const locale = resolveLocale(joplinLocale || '');
+	const t = new Translator(locale, (catalogs as Record<string, Catalog>)[locale] || null);
+	const numberLocale = locale === 'en' ? undefined : locale.replace('_', '-');
+	const number = (n: number) => n.toLocaleString(numberLocale || 'en');
+	return {
+		locale,
+		numberLocale,
+		// The plugin's name is not translated.
+		panelTitle: 'Note History Diff',
+		commandLabel: t._('Show note history diff'),
+		mainWindowOnly: t._('Note History Diff works in the main window only. Open the note in the main window to see its history.'),
+		refresh: t._('Refresh'),
+		close: t._('Close'),
+		loading: t._('Loading note history…'),
+		noNote: t._('Select a note to see its changes.'),
+		noHistory: t._('This note has no history yet.'),
+		// TRANSLATORS: {interval} is a number of minutes, {days} a number of days (Joplin's note history settings).
+		historyHint: (interval, days) => t._('Joplin saves a revision when the note is changed at least {interval} minutes after the previous revision, and keeps it for {days} days.', { interval, days }),
+		historyDisabled: t._('Note history is turned off. You can turn it on in Tools > Options > Note History.'),
+		nothingToCompare: t._('The only revision is identical to the current note, so there is nothing to compare yet.'),
+		encrypted: t._('A revision is still encrypted, so its content cannot be rebuilt.'),
+		// TRANSLATORS: {reason} is a technical code such as "invalid-patch"; keep it as it is.
+		rebuildFailed: reason => t._('A revision could not be read ({reason}).', { reason }),
+		// TRANSLATORS: {message} is an error message, usually in English.
+		error: message => t._('Something went wrong: {message}', { message }),
+		// TRANSLATORS: Label of the list of the older version to compare.
+		from: t._('From'),
+		// TRANSLATORS: Label of the list of the newer version to compare.
+		to: t._('To'),
+		// TRANSLATORS: A saved revision of the note in the version list. {time} is its date and time.
+		revision: time => t._('Revision {time}', { time }),
+		currentNote: t._('Current note'),
+		// TRANSLATORS: Length of a version in the version list. {count} is a formatted number.
+		chars: count => t.ngettext('{count} char', '{count} chars', count, { count: number(count) }),
+		// TRANSLATORS: One entry of the version list: {name} is "Revision <date>" or "Current note", {size} its length or "cannot be read".
+		versionLabel: (name, size) => t._('{name} ({size})', { name, size }),
+		unavailable: t._('cannot be read'),
+		sameVersion: t._('The same version is selected on both sides.'),
+		modeSideBySide: t._('Side by side'),
+		// TRANSLATORS: The one-column layout of the diff.
+		modeUnified: t._('Unified'),
+		olderPair: t._('◀ Older pair'),
+		newerPair: t._('Newer pair ▶'),
+		previousChange: t._('↑ Previous change'),
+		nextChange: t._('↓ Next change'),
+		ignoreWhitespace: t._('Ignore trailing spaces and line endings'),
+		latestVsCurrent: t._('Comparing the latest revision with the current note.'),
+		previousVsLatest: t._('The note has not changed since the latest revision, so it is compared with the revision before it.'),
+		// TRANSLATORS: Number of lines added and removed in the diff.
+		lineStats: (added, removed) => t._('+{added} / −{removed} lines', { added: number(added), removed: number(removed) }),
+		// TRANSLATORS: Heading of the diff of the note title.
+		title: t._('Title'),
+		bodyUnchanged: t._('Body: no changes'),
+		// TRANSLATORS: Shown in place of unchanged lines that are folded away.
+		foldedLines: count => t.ngettext('… {count} unchanged line …', '… {count} unchanged lines …', count, { count: number(count) }),
+	};
 }
