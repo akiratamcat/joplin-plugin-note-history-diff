@@ -24,6 +24,8 @@ export interface Strings {
 	chars: (count: number) => string;
 	unavailable: string;
 	sameVersion: string;
+	modeSideBySide: string;
+	modeUnified: string;
 	latestVsCurrent: string;
 	previousVsLatest: string;
 	lineStats: (added: number, removed: number) => string;
@@ -56,6 +58,8 @@ const en: Strings = {
 	chars: count => `${count.toLocaleString('en')} chars`,
 	unavailable: 'cannot be read',
 	sameVersion: 'The same version is selected on both sides.',
+	modeSideBySide: 'Side by side',
+	modeUnified: 'Unified',
 	latestVsCurrent: 'Comparing the latest revision with the current note.',
 	previousVsLatest: 'The note has not changed since the latest revision, so it is compared with the revision before it.',
 	lineStats: (added, removed) => `+${added} / −${removed} lines`,
@@ -88,6 +92,8 @@ const ja: Strings = {
 	chars: count => `${count.toLocaleString('ja')} 文字`,
 	unavailable: '読み込めません',
 	sameVersion: '比較元と比較先に同じ版を選んでいます。',
+	modeSideBySide: '横並び',
+	modeUnified: '1 列',
 	latestVsCurrent: '最新の版と現在のノートを比べています。',
 	previousVsLatest: '最新の版から変更がないため、その 1 つ前の版と比べています。',
 	lineStats: (added, removed) => `+${added} / −${removed} 行`,

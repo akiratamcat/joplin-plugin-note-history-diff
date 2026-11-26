@@ -1,12 +1,12 @@
 import joplin from 'api';
-import { MenuItemLocation, ToolbarButtonLocation } from 'api/types';
+import { MenuItemLocation, SettingItemType, ToolbarButtonLocation } from 'api/types';
 import { ComparisonSide, CurrentNote, diffVersions, listVersionChoices, planDefaultComparison, sideForKey, sideKey, VersionChoice } from './core/comparison';
 import { RebuildError, RevisionRebuilder } from './history/revisionRebuilder';
 import { joplinRevisionFetcher } from './history/joplinFetcher';
 import { RevisionRepository } from './history/revisionRepository';
 import { stringsFor } from './ui/i18n';
 import { DateTimeFormat } from './ui/dateFormat';
-import { ComparisonExplanation, PanelState, renderPanel } from './ui/panelView';
+import { ComparisonExplanation, DisplayMode, PanelState, renderPanel } from './ui/panelView';
 
 // Shows the note history diff in the editor area (where the note editor is),
 // like Joplin's own "Note history" view, using the editor plugin API.
@@ -30,6 +30,8 @@ const AUTO_REOPEN_WINDOW_MS = 2000;
 // anything, tells the two apart. Only if it cannot be read, a first opening
 // this soon after setup counts as automatic (v0.3.3 rule).
 const SHOWN_EDITOR_VIEWS_SETTING = 'plugins.shownEditorViewIds';
+// F3: the display mode the user picked last. Internal: not shown in Options.
+const DISPLAY_MODE_SETTING = 'displayMode';
 const STARTUP_REOPEN_WINDOW_MS = 5000;
 
 async function globalSetting(key: string): Promise<any> {
@@ -92,6 +94,20 @@ interface Session {
 
 export async function registerHistoryEditorView(): Promise<void> {
 	const strings = stringsFor(await globalSetting('locale'));
+	await joplin.settings.registerSettings({
+		[DISPLAY_MODE_SETTING]: {
+			value: 'side',
+			type: SettingItemType.String,
+			public: false,
+			label: 'Display mode (side or unified)',
+		},
+	});
+	let displayMode: DisplayMode = 'side';
+	try {
+		displayMode = (await joplin.settings.value(DISPLAY_MODE_SETTING)) === 'unified' ? 'unified' : 'side';
+	} catch (error) {
+		console.warn('Note History Diff: could not read the display mode', error);
+	}
 	// Was the view left open when Joplin was last closed? null: unknown.
 	const shownAtStart = await globalSetting(SHOWN_EDITOR_VIEWS_SETTING);
 	const reopenExpected = viewRememberedAsShown(shownAtStart);
@@ -133,7 +149,7 @@ export async function registerHistoryEditorView(): Promise<void> {
 	};
 
 	const render = async (state: PanelState) => {
-		if (viewHandle) await joplin.views.editors.setHtml(viewHandle, renderPanel(state, strings, dateTimeFormat));
+		if (viewHandle) await joplin.views.editors.setHtml(viewHandle, renderPanel(state, strings, { format: dateTimeFormat, mode: displayMode }));
 	};
 
 	let session: Session | null = null;
@@ -341,6 +357,11 @@ export async function registerHistoryEditorView(): Promise<void> {
 				if (message.type === 'refresh' && historyNoteId) await refresh(historyNoteId, { reloadHistory: true });
 				if (message.type === 'shown') await handleShown(windowNoteId, 'webview');
 				if (message.type === 'select' && typeof message.from === 'string' && typeof message.to === 'string') await select(message.from, message.to);
+				if (message.type === 'mode' && (message.mode === 'side' || message.mode === 'unified')) {
+					// The view already switched; remember the choice for next time.
+					displayMode = message.mode;
+					await joplin.settings.setValue(DISPLAY_MODE_SETTING, displayMode);
+				}
 				return null;
 			});
 			// Called when the note changes or when the view becomes visible.

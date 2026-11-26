@@ -39,6 +39,43 @@ body {
 	margin: 4px 0 8px;
 }
 
+.nhd .meta-row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: 4px 12px;
+}
+
+/* F3: display mode buttons. */
+.nhd .modes {
+	display: inline-flex;
+}
+
+.nhd .modes button {
+	font: inherit;
+	font-size: 0.92em;
+	color: inherit;
+	background-color: transparent;
+	border: 1px solid var(--joplin-divider-color, #ccc);
+	padding: 1px 10px;
+	cursor: pointer;
+}
+
+.nhd .modes button:first-child {
+	border-radius: 4px 0 0 4px;
+}
+
+.nhd .modes button:last-child {
+	border-left: none;
+	border-radius: 0 4px 4px 0;
+}
+
+.nhd .modes button.active {
+	background-color: rgba(128, 128, 128, 0.2);
+	font-weight: bold;
+}
+
 /* F2: version pickers. */
 .nhd .pickers {
 	display: flex;
@@ -105,6 +142,19 @@ body {
 	background-color: rgba(248, 81, 73, 0.18);
 }
 
+/* F4: the characters that changed inside a changed line. */
+.nhd .line.insert .chg,
+.nhd .sbs .cell.insert .chg {
+	background-color: rgba(46, 160, 67, 0.45);
+	border-radius: 2px;
+}
+
+.nhd .line.delete .chg,
+.nhd .sbs .cell.delete .chg {
+	background-color: rgba(248, 81, 73, 0.45);
+	border-radius: 2px;
+}
+
 .nhd .fold {
 	padding: 2px 6px;
 	opacity: 0.6;
@@ -140,7 +190,16 @@ body {
 	display: none;
 }
 
-/* Narrow panel: switch to the unified (one column) view. */
+/* One column when chosen (F3). */
+.nhd.mode-unified .view-sbs {
+	display: none;
+}
+
+.nhd.mode-unified .view-unified {
+	display: block;
+}
+
+/* Narrow view: switch to the unified (one column) view. */
 @media (max-width: 599px) {
 	.nhd .view-sbs {
 		display: none;

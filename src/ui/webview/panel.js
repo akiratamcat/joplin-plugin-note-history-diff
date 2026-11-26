@@ -7,6 +7,21 @@
 // "toggle editor" button (v0.3.4 test), and a hidden view has no size.
 (function() {
 	document.addEventListener('click', function(event) {
+		// F3: switch the layout at once; the plugin remembers the choice.
+		const modeButton = event.target && event.target.closest ? event.target.closest('[data-mode]') : null;
+		if (modeButton) {
+			const mode = modeButton.getAttribute('data-mode');
+			const root = document.querySelector('.nhd');
+			if (root) {
+				root.classList.remove('mode-side', 'mode-unified');
+				root.classList.add('mode-' + mode);
+			}
+			document.querySelectorAll('[data-mode]').forEach(function(button) {
+				button.classList.toggle('active', button === modeButton);
+			});
+			webviewApi.postMessage({ type: 'mode', mode: mode });
+			return;
+		}
 		const target = event.target && event.target.closest ? event.target.closest('[data-action]') : null;
 		if (!target) return;
 		webviewApi.postMessage({ type: target.getAttribute('data-action') });

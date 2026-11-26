@@ -1,10 +1,15 @@
+import { inlineDiff, Segment } from '../diff/inlineDiff';
 import { DiffLine } from '../diff/lineDiff';
 
 // Renders a line diff as HTML, in two layouts: side-by-side and unified
-// (one column). Both are emitted; the panel CSS shows side-by-side when the
-// panel is at least 600px wide and the unified view below that (F3).
+// (one column). Both are emitted; the CSS and the display mode pick one (F3).
+// Inside a changed line, the characters that changed are highlighted (F4).
 
 const CONTEXT_LINES = 3;
+// Character highlighting costs a diff per changed line pair. Past this many
+// pairs (a very large change), the rest are only marked line by line
+// (spec section 6: large notes fall back to the line diff).
+export const INLINE_MAX_PAIRS = 2000;
 
 export interface DiffViewLabels {
 	// e.g. (n) => `… ${n} unchanged lines …`
@@ -55,39 +60,41 @@ export function foldRuns<T>(items: T[], isEqual: (item: T) => boolean, context =
 	return output;
 }
 
-function cellText(text: string): string {
-	return escapeHtml(text) || '&nbsp;';
+// The text of a line, with its changed characters wrapped in <span class="chg">.
+export function segmentsHtml(text: string, segments: Segment[] | null): string {
+	if (!segments) return escapeHtml(text) || '&nbsp;';
+	const html = segments.map(s => (s.changed ? `<span class="chg">${escapeHtml(s.text)}</span>` : escapeHtml(s.text))).join('');
+	return html || '&nbsp;';
 }
 
-function foldHtml(count: number, labels: DiffViewLabels): string {
-	return `<div class="fold">${escapeHtml(labels.foldedLines(count))}</div>`;
-}
-
-export function renderUnified(lines: DiffLine[], labels: DiffViewLabels): string {
-	return foldRuns(lines, l => l.kind === 'equal').map(line => {
-		if (isFold(line)) return foldHtml(line.count, labels);
-		const sign = line.kind === 'insert' ? '+' : line.kind === 'delete' ? '−' : ' ';
-		return `<div class="line ${line.kind}"><span class="sign">${sign}</span>${cellText(line.text)}</div>`;
-	}).join('');
+export interface SideCell {
+	no: number;
+	text: string;
+	// Character highlight (F4), or null when the line is only marked as a whole.
+	segments: Segment[] | null;
 }
 
 export interface SideRow {
-	left: { no: number; text: string } | null;
-	right: { no: number; text: string } | null;
+	left: SideCell | null;
+	right: SideCell | null;
 	kind: 'equal' | 'change';
 }
 
-// Pairs deleted lines (left) with inserted lines (right) for the side-by-side view.
-export function toSideRows(lines: DiffLine[]): SideRow[] {
+// Pairs deleted lines (left) with inserted lines (right), in order, within
+// each block of changes. The same pairs drive the character highlight in
+// both layouts.
+export function toSideRows(lines: DiffLine[], maxInlinePairs = INLINE_MAX_PAIRS): SideRow[] {
 	const rows: SideRow[] = [];
 	let leftNo = 0;
 	let rightNo = 0;
+	let pairs = 0;
 	let index = 0;
 	while (index < lines.length) {
 		if (lines[index].kind === 'equal') {
 			leftNo++;
 			rightNo++;
-			rows.push({ left: { no: leftNo, text: lines[index].text }, right: { no: rightNo, text: lines[index].text }, kind: 'equal' });
+			const text = lines[index].text;
+			rows.push({ left: { no: leftNo, text, segments: null }, right: { no: rightNo, text, segments: null }, kind: 'equal' });
 			index++;
 			continue;
 		}
@@ -99,9 +106,14 @@ export function toSideRows(lines: DiffLine[]): SideRow[] {
 			index++;
 		}
 		for (let i = 0; i < Math.max(deleted.length, inserted.length); i++) {
+			let inline = null;
+			if (i < deleted.length && i < inserted.length && pairs < maxInlinePairs) {
+				pairs++;
+				inline = inlineDiff(deleted[i], inserted[i]);
+			}
 			rows.push({
-				left: i < deleted.length ? { no: ++leftNo, text: deleted[i] } : null,
-				right: i < inserted.length ? { no: ++rightNo, text: inserted[i] } : null,
+				left: i < deleted.length ? { no: ++leftNo, text: deleted[i], segments: inline ? inline.before : null } : null,
+				right: i < inserted.length ? { no: ++rightNo, text: inserted[i], segments: inline ? inline.after : null } : null,
 				kind: 'change',
 			});
 		}
@@ -109,21 +121,59 @@ export function toSideRows(lines: DiffLine[]): SideRow[] {
 	return rows;
 }
 
-function sideCell(cell: SideRow['left'], changeClass: string): string {
-	if (!cell) return '<div class="no"></div><div class="cell empty"></div>';
-	return `<div class="no">${cell.no}</div><div class="cell ${changeClass}">${cellText(cell.text)}</div>`;
+function foldHtml(count: number, labels: DiffViewLabels): string {
+	return `<div class="fold">${escapeHtml(labels.foldedLines(count))}</div>`;
 }
 
-export function renderSideBySide(lines: DiffLine[], labels: DiffViewLabels): string {
-	const rows = foldRuns(toSideRows(lines), r => r.kind === 'equal').map(row => {
+function unifiedLine(kind: 'equal' | 'delete' | 'insert', cell: SideCell): string {
+	const sign = kind === 'insert' ? '+' : kind === 'delete' ? '−' : ' ';
+	return `<div class="line ${kind}"><span class="sign">${sign}</span>${segmentsHtml(cell.text, cell.segments)}</div>`;
+}
+
+// One column: in each block of changes, the deleted lines, then the inserted ones.
+export function renderUnified(rows: SideRow[], labels: DiffViewLabels): string {
+	const items = foldRuns(rows, r => r.kind === 'equal');
+	const html: string[] = [];
+	let index = 0;
+	while (index < items.length) {
+		const item = items[index];
+		if (isFold(item)) {
+			html.push(foldHtml(item.count, labels));
+			index++;
+			continue;
+		}
+		if (item.kind === 'equal') {
+			html.push(unifiedLine('equal', item.left));
+			index++;
+			continue;
+		}
+		const block: SideRow[] = [];
+		while (index < items.length && !isFold(items[index]) && (items[index] as SideRow).kind === 'change') {
+			block.push(items[index] as SideRow);
+			index++;
+		}
+		for (const row of block) if (row.left) html.push(unifiedLine('delete', row.left));
+		for (const row of block) if (row.right) html.push(unifiedLine('insert', row.right));
+	}
+	return html.join('');
+}
+
+function sideCell(cell: SideCell | null, changeClass: string): string {
+	if (!cell) return '<div class="no"></div><div class="cell empty"></div>';
+	return `<div class="no">${cell.no}</div><div class="cell ${changeClass}">${segmentsHtml(cell.text, cell.segments)}</div>`;
+}
+
+export function renderSideBySide(rows: SideRow[], labels: DiffViewLabels): string {
+	const html = foldRuns(rows, r => r.kind === 'equal').map(row => {
 		if (isFold(row)) return `<div class="sbs-fold">${foldHtml(row.count, labels)}</div>`;
 		const changed = row.kind === 'change';
 		return `<div class="sbs-row">${sideCell(row.left, changed ? 'delete' : '')}${sideCell(row.right, changed ? 'insert' : '')}</div>`;
 	});
-	return `<div class="sbs">${rows.join('')}</div>`;
+	return `<div class="sbs">${html.join('')}</div>`;
 }
 
-// Both layouts; CSS picks one by panel width.
+// Both layouts; the CSS and the display mode pick one.
 export function renderDiffViews(lines: DiffLine[], labels: DiffViewLabels): string {
-	return `<div class="view-sbs">${renderSideBySide(lines, labels)}</div><div class="view-unified">${renderUnified(lines, labels)}</div>`;
+	const rows = toSideRows(lines);
+	return `<div class="view-sbs">${renderSideBySide(rows, labels)}</div><div class="view-unified">${renderUnified(rows, labels)}</div>`;
 }

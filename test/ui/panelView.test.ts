@@ -54,12 +54,23 @@ describe('renderPanel', () => {
 		const diff = diffVersions({ title: 'Plan', body: 'a\n<b>\n' }, { title: 'Plan <final>', body: 'a\n<c>\n' });
 		const html = result(diff, 'rev-2', CURRENT_KEY, 'latest-vs-current');
 		expect(html).toContain('+1 / −1 lines');
-		expect(html).toContain('Plan &lt;final&gt;');
-		expect(html).toContain('&lt;c&gt;');
+		expect(html).toContain('Plan<span class="chg"> &lt;final&gt;</span>');
+		expect(html).toContain('&lt;<span class="chg">c</span>&gt;');
 		expect(html).not.toContain('<c>');
 		expect(html).toContain('view-sbs');
 		expect(html).toContain('view-unified');
 		expect(html).toContain(en.latestVsCurrent);
+		// F3: side by side by default, with the mode buttons.
+		expect(html).toContain('class="nhd mode-side"');
+		expect(html).toContain('<button data-mode="side" class="active">');
+		expect(html).toContain('<button data-mode="unified" class="">');
+	});
+
+	test('result: the remembered one-column mode (F3)', () => {
+		const diff = diffVersions({ title: 'T', body: 'x' }, { title: 'T', body: 'y' });
+		const html = renderPanel({ kind: 'result', choices, fromKey: 'rev-2', toKey: CURRENT_KEY, diff, explanation: null }, en, { mode: 'unified' });
+		expect(html).toContain('class="nhd mode-unified"');
+		expect(html).toContain('<button data-mode="unified" class="active">');
 	});
 
 	test('result: version pickers (F2) list every version, select the compared ones and disable unreadable ones', () => {
@@ -80,7 +91,7 @@ describe('renderPanel', () => {
 		const time = new Date(2026, 10, 24, 21, 10).getTime();
 		const dated: VersionChoice[] = [{ key: CURRENT_KEY, kind: 'current', time, bodyLength: 1 }, { key: 'rev-1', kind: 'revision', time, bodyLength: 1 }];
 		const diff = diffVersions({ title: 'T', body: 'x' }, { title: 'T', body: 'y' });
-		const html = renderPanel({ kind: 'result', choices: dated, fromKey: 'rev-1', toKey: CURRENT_KEY, diff, explanation: null }, ja, { date: 'DD/MM/YYYY', time: 'h:mm A' });
+		const html = renderPanel({ kind: 'result', choices: dated, fromKey: 'rev-1', toKey: CURRENT_KEY, diff, explanation: null }, ja, { format: { date: 'DD/MM/YYYY', time: 'h:mm A' } });
 		expect(html).toContain('版 24/11/2026 9:10 PM（1 文字）');
 	});
 

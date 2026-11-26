@@ -1,6 +1,7 @@
 import { VersionChoice, VersionDiff } from '../core/comparison';
 import { DateTimeFormat, formatDateTime } from './dateFormat';
-import { escapeHtml, renderDiffViews } from './diffView';
+import { inlineDiff } from '../diff/inlineDiff';
+import { escapeHtml, renderDiffViews, segmentsHtml } from './diffView';
 import { Strings } from './i18n';
 
 // Why the default comparison (F1) compares what it compares; null once the
@@ -18,6 +19,16 @@ export type PanelState =
 	| { kind: 'result'; choices: VersionChoice[]; fromKey: string; toKey: string; diff: VersionDiff; explanation: ComparisonExplanation };
 
 const LOCALE_FORMAT: DateTimeFormat = { date: null, time: null };
+
+// F3: side by side (falls back to one column when narrower than 600px), or
+// always one column. The plugin remembers the user's choice.
+export type DisplayMode = 'side' | 'unified';
+
+export interface RenderOptions {
+	// Joplin's date and time formats; the locale's format when omitted.
+	format?: DateTimeFormat;
+	mode?: DisplayMode;
+}
 
 function choiceLabel(choice: VersionChoice, strings: Strings, format: DateTimeFormat): string {
 	const name = choice.kind === 'current' ? strings.currentNote : strings.revision(formatDateTime(choice.time, format, strings.locale));
@@ -55,11 +66,12 @@ function message(text: string, extra = ''): string {
 
 function renderTitle(diff: VersionDiff, strings: Strings): string {
 	if (!diff.titleChanged) return '';
+	const inline = inlineDiff(diff.title.before, diff.title.after);
 	return `
 	<div class="section-label">${escapeHtml(strings.title)}</div>
 	<div class="diff title-diff">
-		<div class="line delete"><span class="sign">−</span>${escapeHtml(diff.title.before) || '&nbsp;'}</div>
-		<div class="line insert"><span class="sign">+</span>${escapeHtml(diff.title.after) || '&nbsp;'}</div>
+		<div class="line delete"><span class="sign">−</span>${segmentsHtml(diff.title.before, inline ? inline.before : null)}</div>
+		<div class="line insert"><span class="sign">+</span>${segmentsHtml(diff.title.after, inline ? inline.after : null)}</div>
 	</div>`;
 }
 
@@ -69,7 +81,7 @@ function renderBody(diff: VersionDiff, strings: Strings): string {
 	return `<div class="diff">${renderDiffViews(body.lines, { foldedLines: strings.foldedLines })}</div>`;
 }
 
-function renderResult(state: Extract<PanelState, { kind: 'result' }>, strings: Strings, format: DateTimeFormat): string {
+function renderResult(state: Extract<PanelState, { kind: 'result' }>, strings: Strings, format: DateTimeFormat, mode: DisplayMode): string {
 	const { diff } = state;
 	const pickers = `
 	<div class="pickers">
@@ -80,13 +92,16 @@ function renderResult(state: Extract<PanelState, { kind: 'result' }>, strings: S
 	const explanation = state.explanation === 'previous-vs-latest' ? strings.previousVsLatest
 		: state.explanation === 'latest-vs-current' ? strings.latestVsCurrent : '';
 	const stats = `<strong>${escapeHtml(strings.lineStats(diff.body.added, diff.body.removed))}</strong>`;
+	const modeButton = (value: DisplayMode, label: string) =>
+		`<button data-mode="${value}" class="${mode === value ? 'active' : ''}">${escapeHtml(label)}</button>`;
+	const modes = `<span class="modes">${modeButton('side', strings.modeSideBySide)}${modeButton('unified', strings.modeUnified)}</span>`;
 	return `${pickers}
-	<p class="meta">${explanation ? `${escapeHtml(explanation)} · ` : ''}${stats}</p>
+	<div class="meta-row"><p class="meta">${explanation ? `${escapeHtml(explanation)} · ` : ''}${stats}</p>${modes}</div>
 	${renderTitle(diff, strings)}
 	${renderBody(diff, strings)}`;
 }
 
-function renderContent(state: PanelState, strings: Strings, format: DateTimeFormat): string {
+function renderContent(state: PanelState, strings: Strings, format: DateTimeFormat, mode: DisplayMode): string {
 	switch (state.kind) {
 	case 'loading':
 		return message(strings.loading);
@@ -105,11 +120,11 @@ function renderContent(state: PanelState, strings: Strings, format: DateTimeForm
 	case 'error':
 		return message(strings.error(state.message));
 	case 'result':
-		return renderResult(state, strings, format);
+		return renderResult(state, strings, format, mode);
 	}
 }
 
-// `format`: Joplin's date and time formats; the locale's format when omitted.
-export function renderPanel(state: PanelState, strings: Strings, format: DateTimeFormat = LOCALE_FORMAT): string {
-	return `<div class="nhd">${toolbar(strings)}${renderContent(state, strings, format)}</div>`;
+export function renderPanel(state: PanelState, strings: Strings, options: RenderOptions = {}): string {
+	const mode = options.mode || 'side';
+	return `<div class="nhd mode-${mode}">${toolbar(strings)}${renderContent(state, strings, options.format || LOCALE_FORMAT, mode)}</div>`;
 }
