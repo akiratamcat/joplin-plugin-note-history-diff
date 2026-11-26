@@ -75,7 +75,8 @@ export async function registerHistoryEditorView(): Promise<void> {
 	// a note change or a restart (v0.3.1 test). Those openings must not be
 	// mistaken for the user pressing Joplin's "toggle editor" button.
 	let lastNoteChangeAt = 0;
-	let firstUpdateSeen = false;
+	let firstShownSeen = false;
+	let closing = false;
 	let setupAt = 0;
 	// Diagnostics for the verification of the editor view behaviour.
 	const log: string[] = [];
@@ -143,14 +144,19 @@ export async function registerHistoryEditorView(): Promise<void> {
 		if (!(await isVisible())) return true;
 		// Leave something readable behind in case switching back does not happen.
 		await render({ kind: 'loading' });
-		for (let attempt = 1; attempt <= 2; attempt++) {
-			await joplin.commands.execute('toggleEditorPlugin');
-			await wait(300);
-			const stillVisible = await isVisible();
-			note(`after toggleEditorPlugin (attempt ${attempt}): visible=${stillVisible}`);
-			if (!stillVisible) return true;
+		closing = true;
+		try {
+			for (let attempt = 1; attempt <= 2; attempt++) {
+				await joplin.commands.execute('toggleEditorPlugin');
+				await wait(300);
+				const stillVisible = await isVisible();
+				note(`after toggleEditorPlugin (attempt ${attempt}): visible=${stillVisible}`);
+				if (!stillVisible) return true;
+			}
+			return false;
+		} finally {
+			closing = false;
 		}
-		return false;
 	};
 
 	const showHistory = async (noteId: string) => {
@@ -167,6 +173,40 @@ export async function registerHistoryEditorView(): Promise<void> {
 		}
 	};
 
+	// The view became visible: by Joplin's update or by the view's own "shown"
+	// message, whichever comes first (Joplin does not always send an update).
+	const handleShown = async (noteId: string | null, source: 'update' | 'webview') => {
+		const visible = await isVisible();
+		note(`${source === 'update' ? 'onUpdate' : 'webview shown'} visible=${visible} note=${!noteId ? 'none' : noteId === historyNoteId ? 'history note' : 'other'}${closing ? ' (closing)' : ''}`);
+		if (!visible || !noteId || closing) return;
+		if (noteId === historyNoteId) {
+			// Already showing this note's history. An update means the note may have changed.
+			if (source === 'update') await refresh(noteId);
+			return;
+		}
+		const first = !firstShownSeen;
+		firstShownSeen = true;
+		const startupReopen = first && (reopenExpected === null
+			? Date.now() - setupAt < STARTUP_REOPEN_WINDOW_MS
+			: reopenExpected);
+		if (startupReopen) {
+			await closeAutoOpened('re-opened by Joplin at startup', noteId);
+			return;
+		}
+		if (Date.now() - lastNoteChangeAt < AUTO_REOPEN_WINDOW_MS) {
+			await closeAutoOpened('re-opened by Joplin after a note change', noteId);
+			return;
+		}
+		// Shown by Joplin's own "toggle editor" button: show this note's history.
+		note('shown by the toggle editor button');
+		await showHistory(noteId);
+	};
+
+	const selectedNoteId = async (): Promise<string | null> => {
+		const ids = await joplin.workspace.selectedNoteIds();
+		return ids && ids.length === 1 ? ids[0] : null;
+	};
+
 	await joplin.views.editors.register(VIEW_ID, {
 		onSetup: async (handle: string) => {
 			viewHandle = handle;
@@ -178,33 +218,12 @@ export async function registerHistoryEditorView(): Promise<void> {
 				if (!message) return null;
 				if (message.type === 'close') await close('close button');
 				if (message.type === 'refresh' && historyNoteId) await refresh(historyNoteId, { reloadHistory: true });
+				if (message.type === 'shown') await handleShown(await selectedNoteId(), 'webview');
 				return null;
 			});
 			// Called when the selected note changes or when the view becomes visible.
 			await joplin.views.editors.onUpdate(handle, async event => {
-				const visible = await isVisible();
-				const firstUpdate = !firstUpdateSeen;
-				firstUpdateSeen = true;
-				note(`onUpdate visible=${visible} note=${event.noteId === historyNoteId ? 'history note' : 'other'}`);
-				if (!visible) return;
-				if (event.noteId === historyNoteId) {
-					await refresh(event.noteId);
-					return;
-				}
-				const startupReopen = firstUpdate && (reopenExpected === null
-					? Date.now() - setupAt < STARTUP_REOPEN_WINDOW_MS
-					: reopenExpected);
-				if (startupReopen) {
-					await closeAutoOpened('re-opened by Joplin at startup', event.noteId);
-					return;
-				}
-				if (Date.now() - lastNoteChangeAt < AUTO_REOPEN_WINDOW_MS) {
-					await closeAutoOpened('re-opened by Joplin after a note change', event.noteId);
-					return;
-				}
-				// Shown by Joplin's own "toggle editor" button: show this note's history.
-				note('shown by the toggle editor button');
-				await showHistory(event.noteId);
+				await handleShown(event.noteId || null, 'update');
 			});
 		},
 		onActivationCheck: async event => {
