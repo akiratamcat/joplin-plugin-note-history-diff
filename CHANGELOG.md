@@ -11,6 +11,8 @@ Changes that users notice are always listed. The Japanese version
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-11-26
+
 ### Fixed
 
 - Copying a selection in the side-by-side view copied text from both versions, which looked like the right side's text. Now only the side where the selection was made can be selected and is copied, without line numbers, missing lines or folded lines ([#1](https://github.com/akiratamcat/joplin-plugin-note-history-diff/issues/1)).
@@ -33,5 +35,6 @@ First release.
 - Colours for the light and dark themes. Dates follow Joplin's date and time formats.
 - User interface in 11 languages, translated with gettext: English, Japanese, Chinese (Simplified and Traditional), Korean, German, French, Spanish, Italian, Portuguese (Brazil) and Russian.
 
-[Unreleased]: https://github.com/akiratamcat/joplin-plugin-note-history-diff/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/akiratamcat/joplin-plugin-note-history-diff/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/akiratamcat/joplin-plugin-note-history-diff/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/akiratamcat/joplin-plugin-note-history-diff/releases/tag/v1.0.0

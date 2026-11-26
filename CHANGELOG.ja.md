@@ -10,6 +10,8 @@
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-11-26
+
 ### 修正
 
 - 横並びの表示で範囲選択してコピーすると、比較元と比較先の両方の文字が混ざってコピーされ、右（比較先）の内容に見えていた。範囲選択を始めた側だけが選べるようにし、その側の文字だけを、行番号、行がない側の空き、折りたたんだ行を除いてコピーするようにした（[#1](https://github.com/akiratamcat/joplin-plugin-note-history-diff/issues/1)）。
@@ -32,5 +34,6 @@
 - 明るいテーマと暗いテーマに合わせた色。日時は Joplin の「日付の形式」「時刻の形式」に従う。
 - 11 言語の画面（gettext で翻訳）：英語、日本語、中国語（簡体字・繁体字）、韓国語、ドイツ語、フランス語、スペイン語、イタリア語、ポルトガル語（ブラジル）、ロシア語。
 
-[Unreleased]: https://github.com/akiratamcat/joplin-plugin-note-history-diff/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/akiratamcat/joplin-plugin-note-history-diff/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/akiratamcat/joplin-plugin-note-history-diff/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/akiratamcat/joplin-plugin-note-history-diff/releases/tag/v1.0.0
