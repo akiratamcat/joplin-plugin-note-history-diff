@@ -4,7 +4,7 @@
 	"app_min_version": "3.7",
 	"version": "1.0.0",
 	"name": "Note History Diff",
-	"description": "Compare two revisions of a note and see what changed.",
+	"description": "Compare two revisions of a note and see what changed. / ノートの 2 つの版を比べて、変わったところを表示します。",
 	"author": "akiratamcat",
 	"homepage_url": "https://github.com/akiratamcat/joplin-plugin-note-history-diff",
 	"repository_url": "https://github.com/akiratamcat/joplin-plugin-note-history-diff",

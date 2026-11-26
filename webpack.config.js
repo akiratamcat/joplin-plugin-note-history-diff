@@ -205,6 +205,12 @@ const pluginConfig = { ...baseConfig, entry: './src/index.ts',
 	plugins: [
 		new CopyPlugin({
 			patterns: [
+				// The license and the third-party notices go into the plugin package too.
+				{
+					from: '{LICENSE,THIRD_PARTY_NOTICES.md,THIRD_PARTY_NOTICES.ja.md}',
+					context: path.resolve(__dirname),
+					to: path.resolve(__dirname, 'dist'),
+				},
 				{
 					from: '**/*',
 					context: path.resolve(__dirname, 'src'),

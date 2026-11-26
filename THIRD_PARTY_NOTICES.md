@@ -1,13 +1,26 @@
-Note History Diff includes the following third-party software.
+# Third-party notices
 
-================================================================
-diff-match-patch 1.0.5
-https://github.com/JackuB/diff-match-patch (npm package)
-Original: https://github.com/google/diff-match-patch
+[日本語](THIRD_PARTY_NOTICES.ja.md)
+
+Note History Diff (MIT License, see `LICENSE`) bundles the third-party software
+below in its plugin package (`.jpl`). Its license and notice follow.
+
+| Component | Version | License | Website | Where |
+| --------- | ------- | ------- | ------- | ----- |
+| diff-match-patch | 1.0.5 | Apache-2.0 | <https://github.com/google/diff-match-patch> | `index.js` |
+
+---
+
+## diff-match-patch
+
+Source: npm package `diff-match-patch` 1.0.5 (<https://github.com/JackuB/diff-match-patch>),
+a packaging of Google's diff-match-patch (<https://github.com/google/diff-match-patch>).
+
 Copyright 2018 The diff-match-patch Authors.
-Licensed under the Apache License, Version 2.0 (below).
-================================================================
 
+Licensed under the Apache License, Version 2.0. The full text follows.
+
+```text
 
                                  Apache License
                            Version 2.0, January 2004
@@ -210,3 +223,4 @@ Licensed under the Apache License, Version 2.0 (below).
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
+```

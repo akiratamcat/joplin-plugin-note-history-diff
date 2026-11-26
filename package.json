@@ -1,14 +1,15 @@
 {
   "name": "joplin-plugin-note-history-diff",
   "version": "1.0.0",
-  "description": "Compare two revisions of a Joplin note and see what changed.",
+  "description": "Compare two revisions of a Joplin note and see what changed. / Joplin のノートの 2 つの版を比べて、変わったところを表示します。",
   "repository": {
     "type": "git",
     "url": "https://github.com/akiratamcat/joplin-plugin-note-history-diff.git"
   },
   "author": "akiratamcat",
   "scripts": {
-    "test": "jest",
+    "test": "node scripts/readme.mjs --check && jest",
+    "readme": "node scripts/readme.mjs",
     "dist": "webpack --env joplin-plugin-config=buildMain && webpack --env joplin-plugin-config=buildExtraScripts && webpack --env joplin-plugin-config=createArchive",
     "prepare": "npm run dist",
     "updateVersion": "webpack --env joplin-plugin-config=updateVersion",
