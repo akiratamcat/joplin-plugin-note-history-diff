@@ -98,7 +98,13 @@ function renderBody(diff: VersionDiff, strings: Strings): string {
 	return `<div class="diff">${renderDiffViews(body.lines, { foldedLines: strings.foldedLines })}</div>`;
 }
 
-function renderResult(state: Extract<PanelState, { kind: 'result' }>, strings: Strings, options: ResolvedOptions): string {
+// The fixed part at the top (versions, buttons) and the part that scrolls (the diff).
+interface Parts {
+	head: string;
+	body: string;
+}
+
+function renderResult(state: Extract<PanelState, { kind: 'result' }>, strings: Strings, options: ResolvedOptions): Parts {
 	const { diff } = state;
 	const { format, mode } = options;
 	const pickers = `
@@ -107,7 +113,7 @@ function renderResult(state: Extract<PanelState, { kind: 'result' }>, strings: S
 		${picker('to', strings.to, state.choices, state.toKey, strings, format)}
 		${pairButtons(state, strings)}
 	</div>`;
-	if (state.fromKey === state.toKey) return `${pickers}${message(strings.sameVersion)}`;
+	if (state.fromKey === state.toKey) return { head: pickers, body: message(strings.sameVersion) };
 	const explanation = state.explanation === 'previous-vs-latest' ? strings.previousVsLatest
 		: state.explanation === 'latest-vs-current' ? strings.latestVsCurrent : '';
 	const stats = `<strong>${escapeHtml(strings.lineStats(diff.body.added, diff.body.removed))}</strong>`;
@@ -120,14 +126,21 @@ function renderResult(state: Extract<PanelState, { kind: 'result' }>, strings: S
 		<button data-jump="next">${escapeHtml(strings.nextChange)}</button>
 	</span>` : '';
 	const whitespace = `<label class="toggle"><input type="checkbox" data-toggle="whitespace"${options.ignoreWhitespace ? ' checked' : ''}> ${escapeHtml(strings.ignoreWhitespace)}</label>`;
-	return `${pickers}
+	return {
+		head: `${pickers}
 	<div class="meta-row"><p class="meta">${explanation ? `${escapeHtml(explanation)} · ` : ''}${stats}</p>${jumps}</div>
-	<div class="controls">${whitespace}${modes}</div>
-	${renderTitle(diff, strings)}
-	${renderBody(diff, strings)}`;
+	<div class="controls">${whitespace}${modes}</div>`,
+		body: `${renderTitle(diff, strings)}
+	${renderBody(diff, strings)}`,
+	};
 }
 
-function renderContent(state: PanelState, strings: Strings, options: ResolvedOptions): string {
+function renderContent(state: PanelState, strings: Strings, options: ResolvedOptions): Parts {
+	if (state.kind === 'result') return renderResult(state, strings, options);
+	return { head: '', body: renderMessage(state, strings) };
+}
+
+function renderMessage(state: Exclude<PanelState, { kind: 'result' }>, strings: Strings): string {
 	switch (state.kind) {
 	case 'loading':
 		return message(strings.loading);
@@ -145,8 +158,6 @@ function renderContent(state: PanelState, strings: Strings, options: ResolvedOpt
 		return message(state.reason === 'encrypted' ? strings.encrypted : strings.rebuildFailed(state.reason));
 	case 'error':
 		return message(strings.error(state.message));
-	case 'result':
-		return renderResult(state, strings, options);
 	}
 }
 
@@ -156,5 +167,7 @@ export function renderPanel(state: PanelState, strings: Strings, options: Render
 		mode: options.mode || 'side',
 		ignoreWhitespace: options.ignoreWhitespace !== false,
 	};
-	return `<div class="nhd mode-${resolved.mode}">${toolbar(strings)}${renderContent(state, strings, resolved)}</div>`;
+	const parts = renderContent(state, strings, resolved);
+	// Only the body scrolls, so the buttons stay in view (v0.7.0 test).
+	return `<div class="nhd mode-${resolved.mode}"><div class="head">${toolbar(strings)}${parts.head}</div><div class="body">${parts.body}</div></div>`;
 }

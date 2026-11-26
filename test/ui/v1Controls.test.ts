@@ -56,4 +56,14 @@ describe('result controls (F6, F7, F9)', () => {
 		expect(renderPanel(state, ja)).toContain('data-toggle="whitespace" checked>');
 		expect(renderPanel(state, ja, { ignoreWhitespace: false })).toContain('data-toggle="whitespace">');
 	});
+
+	test('the controls are in the fixed head and the diff in the scrolling body', () => {
+		const html = renderPanel({ kind: 'result', choices, fromKey: 'r2', toKey: CURRENT_KEY, diff: changed, explanation: null }, ja);
+		const body = html.indexOf('<div class="body">');
+		expect(html.indexOf('<div class="head">')).toBeLessThan(body);
+		for (const marker of ['data-jump="next"', 'data-action="pair-older"', 'data-select="from"', 'data-toggle="whitespace"']) {
+			expect(html.indexOf(marker)).toBeLessThan(body);
+		}
+		expect(html.indexOf('class="view-sbs"')).toBeGreaterThan(body);
+	});
 });

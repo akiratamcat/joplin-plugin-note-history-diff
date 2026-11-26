@@ -20,7 +20,7 @@
 	// context above it, and flashes it.
 	const JUMP_MARGIN = 48;
 	function jump(direction) {
-		const scroller = document.querySelector('.nhd');
+		const scroller = document.querySelector('.nhd > .body');
 		const hunks = visibleHunks();
 		if (!scroller || !hunks.length) return;
 		const top = scroller.getBoundingClientRect().top;
