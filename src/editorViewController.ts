@@ -21,6 +21,7 @@ export const EDITOR_STATUS_COMMAND = 'noteHistoryDiff.editorViewStatus';
 const VIEW_ID = 'historyDiffView';
 // An opening of the view this soon after a note change is Joplin re-opening it by itself.
 const AUTO_REOPEN_WINDOW_MS = 2000;
+const HIDDEN_BEFORE_NOTE_CHANGE_MS = 1000;
 // At startup Joplin re-opens a view that was left open; it remembers that in the
 // setting below. The first opening is not always that, though: Joplin does not
 // send updates to a hidden view, so the user's first "toggle editor" press is
@@ -75,6 +76,13 @@ export async function registerHistoryEditorView(): Promise<void> {
 	// a note change or a restart (v0.3.1 test). Those openings must not be
 	// mistaken for the user pressing Joplin's "toggle editor" button.
 	let lastNoteChangeAt = 0;
+	// Whether the view was shown when the note last changed. Only then can Joplin
+	// re-open it by itself; otherwise an opening right after a note change is the
+	// user's "toggle editor" press (v0.3.5 test).
+	let shownAtNoteChange = false;
+	// When the history was last hidden. Joplin may hide the view just before it
+	// reports the note change, so a very recent hiding still counts as shown.
+	let historyHiddenAt = 0;
 	let firstShownSeen = false;
 	let closing = false;
 	let setupAt = 0;
@@ -193,13 +201,27 @@ export async function registerHistoryEditorView(): Promise<void> {
 			await closeAutoOpened('re-opened by Joplin at startup', noteId);
 			return;
 		}
-		if (Date.now() - lastNoteChangeAt < AUTO_REOPEN_WINDOW_MS) {
+		const sinceNoteChange = Date.now() - lastNoteChangeAt;
+		const noteChangeReopen = shownAtNoteChange && sinceNoteChange < AUTO_REOPEN_WINDOW_MS;
+		shownAtNoteChange = false;
+		if (noteChangeReopen) {
 			await closeAutoOpened('re-opened by Joplin after a note change', noteId);
 			return;
 		}
 		// Shown by Joplin's own "toggle editor" button: show this note's history.
-		note('shown by the toggle editor button');
+		note(`shown by the toggle editor button (${sinceNoteChange} ms after a note change)`);
 		await showHistory(noteId);
+	};
+
+	// The view was hidden, possibly by Joplin's "toggle editor" button rather than
+	// by "Close": the history is no longer shown, so forget the note.
+	const handleHidden = async () => {
+		const visible = await isVisible();
+		note(`webview hidden visible=${visible}${closing ? ' (closing)' : ''}`);
+		if (visible || closing || !historyNoteId) return;
+		historyHiddenAt = Date.now();
+		historyNoteId = null;
+		generation++;
 	};
 
 	const selectedNoteId = async (): Promise<string | null> => {
@@ -219,6 +241,7 @@ export async function registerHistoryEditorView(): Promise<void> {
 				if (message.type === 'close') await close('close button');
 				if (message.type === 'refresh' && historyNoteId) await refresh(historyNoteId, { reloadHistory: true });
 				if (message.type === 'shown') await handleShown(await selectedNoteId(), 'webview');
+				if (message.type === 'hidden') await handleHidden();
 				return null;
 			});
 			// Called when the selected note changes or when the view becomes visible.
@@ -237,7 +260,11 @@ export async function registerHistoryEditorView(): Promise<void> {
 	await joplin.workspace.onNoteSelectionChange(async (event: any) => {
 		lastNoteChangeAt = Date.now();
 		const selected = event && event.value && event.value.length ? event.value[0] : null;
-		if (selected !== historyNoteId && (historyNoteId || (await isVisible()))) await close('note changed');
+		const visible = await isVisible();
+		const justHidden = Date.now() - historyHiddenAt < HIDDEN_BEFORE_NOTE_CHANGE_MS;
+		shownAtNoteChange = visible || historyNoteId !== null || justHidden;
+		note(`note changed (view visible=${visible}, history note set=${historyNoteId !== null}, just hidden=${justHidden})`);
+		if (selected !== historyNoteId && shownAtNoteChange) await close('note changed');
 	});
 
 	await joplin.commands.register({

@@ -2,7 +2,8 @@
 // Runs inside the Note History Diff view. Buttons carry a data-action
 // attribute ("refresh", "close"); the plugin handles the action.
 //
-// It also tells the plugin when the view becomes visible ("shown"): Joplin
+// It also tells the plugin when the view becomes visible ("shown") or hidden
+// ("hidden"): Joplin
 // does not always send an update when the user shows the view with its
 // "toggle editor" button (v0.3.4 test), and a hidden view has no size.
 (function() {
@@ -15,6 +16,7 @@
 	let visible = false;
 	function setVisible(now) {
 		if (now && !visible) webviewApi.postMessage({ type: 'shown' });
+		if (!now && visible) webviewApi.postMessage({ type: 'hidden' });
 		visible = now;
 	}
 	function checkSize() {
