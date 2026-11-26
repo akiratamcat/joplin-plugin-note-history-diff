@@ -1,7 +1,6 @@
 {
   "name": "joplin-plugin-note-history-diff",
-  "version": "0.7.2",
-  "private": true,
+  "version": "1.0.0",
   "description": "Compare two revisions of a Joplin note and see what changed.",
   "repository": {
     "type": "git",
