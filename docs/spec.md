@@ -219,7 +219,7 @@ Joplin は履歴を「前の版との差分」として保存しています。�
 2. **MVP**：F1〜F5 を作り、受け入れ条件を満たす（2026-11-26 に完了。v0.6.0 で受け入れ条件 9 項目をすべて確認）
 3. **次の段階**：F6・F7・F9（表示と移動の使いやすさ）を足す
 4. **部分的に戻す**：F10 は v1 の後に回す（2026-11-26 に決定）。ノートを書き換えるので、単独でテストしてから公開する
-5. **v1 リリース（ゴール）**：8 章の条件を満たして npm に公開し、公式プラグイン一覧と Joplin 本体の検索に出ることを確かめてから、[要望のフォーラム](https://discourse.joplinapp.org/t/side-by-side-difference-view-for-note-history/26461)で知らせる（2026-11-26 に v1.0.0 を npm と GitHub に公開。公式一覧への掲載の確認と、フォーラムでの告知が残り）
+5. **v1 リリース（ゴール）**：8 章の条件を満たして npm に公開し、公式プラグイン一覧と Joplin 本体の検索に出ることを確かめてから、[要望のフォーラム](https://discourse.joplinapp.org/t/side-by-side-difference-view-for-note-history/26461)で知らせる（2026-11-26 に v1.0.0 を npm と GitHub に公開。同日、公式一覧に掲載され、Joplin 本体の検索で見つかることを確認。v1 達成。フォーラムでの告知が残り）
 6. **v1 の後**：モバイル版、F10（部分的に戻す）、F15（大きなダイアログ）に対応する。F11〜F14 は利用者の声を見て順番を決める
 
 ## 8. v1（正式リリース）の条件
@@ -243,7 +243,7 @@ npm に公開した時点で一覧に載るため、v1 より前の試用版は 
 - [x] `manifest.json` の必須項目（`manifest_version`、`name`、`version`、`app_min_version`）を埋める。`version` は `1.0.0` にし、`npm run updateVersion` で `package.json` とそろえる
 - [x] GitHub の公開リポジトリ（予定：`https://github.com/akiratamcat/joplin-plugin-note-history-diff`）に push し、`repository_url` と `homepage_url` をそこに向ける。スクリーンショットを相対パスで載せるには、どちらかが GitHub を指している必要がある
 - [x] `README.md` と `LICENSE`（MIT）を置く
-- [ ] 公開後、npm のキーワード検索、公式プラグイン一覧、Joplin 本体の検索の 3 か所で見つかることを確かめる
+- [x] 公開後、npm のキーワード検索、公式プラグイン一覧、Joplin 本体の検索の 3 か所で見つかることを確かめる（2026-11-26：公式一覧への掲載と、Joplin 本体の検索・インストールを確認。npm の検索と公式サイトのプラグインのページは、索引の反映待ち）
 
 2026-11-26 に v1.0.0 を公開した（npm の `joplin-plugin-note-history-diff@1.0.0`、GitHub Releases の v1.0.0 に `.jpl` を添付）。公開前に、利用者向けの文書を英日併記にし、UI を gettext で 11 言語にした。
 

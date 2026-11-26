@@ -822,3 +822,9 @@ v1.0.0 として直接公開する（試用版の期間は設けない。利用�
 - タグ `v1.0.0` を push し、GitHub Releases に `.jpl` を添付した（本文は CHANGELOG の英日）。
 - 公開時の npm の警告（`repository.url` の書き方）に合わせて、`package.json` の URL を `git+https://…` にした。
 - 残り：公式プラグイン一覧と Joplin 本体の検索に出ることの確認（公式リポジトリは 30 分ごとに更新される）。
+
+### 公式一覧への掲載（2026-11-26）
+
+- 13:52（UTC）に公式リポジトリ（joplin/plugins）に取り込まれた（「New: io.github.akiratamcat.note-history-diff@1.0.0」）。
+- 利用者が Joplin 本体のプラグイン検索で見つかり、インストールできることを確認した。**v1 達成。**
+- npm のキーワード検索と、公式サイトのプラグインのページ（joplinapp.org/plugins/plugin/io.github.akiratamcat.note-history-diff/）は、確認した時点ではまだ出ていない（索引の反映待ち）。
