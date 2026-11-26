@@ -269,6 +269,14 @@ body {
 	border-left: 1px solid var(--joplin-divider-color, #ddd);
 }
 
+/* Issue #1: only the side where the mouse was pressed can be selected
+   (panel.js sets the class), and the folded lines are never selected. */
+.nhd .sbs.select-left .right,
+.nhd .sbs.select-right .left,
+.nhd .sbs .sbs-fold {
+	user-select: none;
+}
+
 /* The side with no line: a plain grey, darker in the light theme and
    lighter in the dark theme than before (stripes were harder to see, v0.5.1 test). */
 .nhd .sbs .cell.empty {

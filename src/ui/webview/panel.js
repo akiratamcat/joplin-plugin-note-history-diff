@@ -94,6 +94,56 @@
 		webviewApi.postMessage({ type: 'select', from: from.value, to: to.value });
 	});
 
+	// Issue #1: in the side-by-side layout every row holds a left cell then a
+	// right cell, so a selection over several rows takes both sides, and the
+	// copied text mixed the two versions. The side where the mouse is pressed
+	// becomes the only selectable one (CSS: .select-left / .select-right), and a
+	// copy takes the selected text of that side only: one line per cell, without
+	// the line numbers, the cells of lines missing on that side, or the folded
+	// lines ("… n unchanged lines …", skipped).
+	function sideOf(node) {
+		const element = node && (node.nodeType === 1 ? node : node.parentElement);
+		const cell = element && element.closest ? element.closest('.sbs .cell, .sbs .no') : null;
+		if (!cell) return null;
+		return cell.classList.contains('right') ? 'right' : cell.classList.contains('left') ? 'left' : null;
+	}
+
+	document.addEventListener('mousedown', function(event) {
+		if (event.button !== 0) return;
+		const side = sideOf(event.target);
+		document.querySelectorAll('.sbs').forEach(function(sbs) {
+			sbs.classList.toggle('select-left', side === 'left');
+			sbs.classList.toggle('select-right', side === 'right');
+		});
+	});
+
+	document.addEventListener('copy', function(event) {
+		const selection = window.getSelection();
+		if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return;
+		const sbs = document.querySelector('.view-sbs .sbs');
+		if (!sbs || sbs.offsetParent === null) return;
+		const side = sbs.classList.contains('select-right') ? 'right' : sbs.classList.contains('select-left') ? 'left' : null;
+		if (!side) return;
+		const range = selection.getRangeAt(0);
+		const lines = [];
+		sbs.querySelectorAll('.cell.' + side).forEach(function(cell) {
+			if (cell.classList.contains('empty') || !range.intersectsNode(cell)) return;
+			const part = document.createRange();
+			part.selectNodeContents(cell);
+			// The first and the last cell may be selected only in part.
+			if (cell.contains(range.startContainer) && range.compareBoundaryPoints(Range.START_TO_START, part) > 0) {
+				part.setStart(range.startContainer, range.startOffset);
+			}
+			if (cell.contains(range.endContainer) && range.compareBoundaryPoints(Range.END_TO_END, part) < 0) {
+				part.setEnd(range.endContainer, range.endOffset);
+			}
+			lines.push(part.toString());
+		});
+		if (!lines.length || !event.clipboardData) return;
+		event.clipboardData.setData('text/plain', lines.join('\n'));
+		event.preventDefault();
+	});
+
 	// Marks a dark Joplin theme on <html>, from the brightness of Joplin's
 	// background colour, so that the stylesheet can use stronger colours.
 	function updateTheme() {

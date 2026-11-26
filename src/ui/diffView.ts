@@ -61,10 +61,11 @@ export function foldRuns<T>(items: T[], isEqual: (item: T) => boolean, context =
 }
 
 // The text of a line, with its changed characters wrapped in <span class="chg">.
+// An empty line stays empty: a placeholder such as &nbsp; would be copied as a
+// non-breaking space (Issue #1). The row keeps its height from the line numbers.
 export function segmentsHtml(text: string, segments: Segment[] | null): string {
-	if (!segments) return escapeHtml(text) || '&nbsp;';
-	const html = segments.map(s => (s.changed ? `<span class="chg">${escapeHtml(s.text)}</span>` : escapeHtml(s.text))).join('');
-	return html || '&nbsp;';
+	if (!segments) return escapeHtml(text);
+	return segments.map(s => (s.changed ? `<span class="chg">${escapeHtml(s.text)}</span>` : escapeHtml(s.text))).join('');
 }
 
 export interface SideCell {
@@ -162,9 +163,12 @@ export function renderUnified(rows: SideRow[], labels: DiffViewLabels): string {
 	return html.join('');
 }
 
-function sideCell(cell: SideCell | null, changeClass: string): string {
-	if (!cell) return '<div class="no"></div><div class="cell empty"></div>';
-	return `<div class="no">${cell.no}</div><div class="cell ${changeClass}">${segmentsHtml(cell.text, cell.segments)}</div>`;
+// Each cell says which side it is on ("left" / "right"), so that a selection and
+// a copy can be kept to one side (Issue #1): in the page, every row holds a left
+// cell then a right cell, so a selection over several rows takes both sides.
+function sideCell(cell: SideCell | null, changeClass: string, side: 'left' | 'right'): string {
+	if (!cell) return `<div class="no ${side}"></div><div class="cell ${side} empty"></div>`;
+	return `<div class="no ${side}">${cell.no}</div><div class="cell ${side}${changeClass ? ` ${changeClass}` : ''}">${segmentsHtml(cell.text, cell.segments)}</div>`;
 }
 
 export function renderSideBySide(rows: SideRow[], labels: DiffViewLabels): string {
@@ -177,7 +181,7 @@ export function renderSideBySide(rows: SideRow[], labels: DiffViewLabels): strin
 		const changed = row.kind === 'change';
 		const hunk = changed && !inBlock;
 		inBlock = changed;
-		return `<div class="sbs-row${hunk ? ' hunk' : ''}">${sideCell(row.left, changed ? 'delete' : '')}${sideCell(row.right, changed ? 'insert' : '')}</div>`;
+		return `<div class="sbs-row${hunk ? ' hunk' : ''}">${sideCell(row.left, changed ? 'delete' : '', 'left')}${sideCell(row.right, changed ? 'insert' : '', 'right')}</div>`;
 	});
 	return `<div class="sbs">${html.join('')}</div>`;
 }

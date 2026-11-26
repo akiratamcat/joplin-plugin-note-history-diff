@@ -33,7 +33,9 @@ describe('segmentsHtml', () => {
 	test('wraps changed characters and escapes HTML', () => {
 		expect(segmentsHtml('a<b', [{ text: 'a', changed: false }, { text: '<b', changed: true }])).toBe('a<span class="chg">&lt;b</span>');
 		expect(segmentsHtml('<x>', null)).toBe('&lt;x&gt;');
-		expect(segmentsHtml('', null)).toBe('&nbsp;');
+		// Issue #1: an empty line stays empty (no &nbsp;, which would be copied).
+		expect(segmentsHtml('', null)).toBe('');
+		expect(segmentsHtml('', [])).toBe('');
 	});
 });
 
@@ -71,4 +73,13 @@ describe('renderUnified', () => {
 		expect([...order].sort((p, q) => p - q)).toEqual(order);
 		expect(renderSideBySide(rows, labels)).toContain('a<span class="chg">2</span>');
 	});
+
+describe('side-by-side cells say their side (Issue #1)', () => {
+	test('every number and cell is marked left or right, including the side with no line', () => {
+		const html = renderSideBySide(toSideRows(lineDiff('a', 'a\nb').lines), labels);
+		expect(html).toContain('<div class="no left">1</div><div class="cell left">a</div><div class="no right">1</div><div class="cell right">a</div>');
+		expect(html).toContain('<div class="no left"></div><div class="cell left empty"></div>');
+		expect(html).toContain('<div class="cell right insert">b</div>');
+	});
+});
 });

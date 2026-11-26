@@ -11,6 +11,11 @@ Changes that users notice are always listed. The Japanese version
 
 ## [Unreleased]
 
+### Fixed
+
+- Copying a selection in the side-by-side view copied text from both versions, which looked like the right side's text. Now only the side where the selection was made can be selected and is copied, without line numbers, missing lines or folded lines ([#1](https://github.com/akiratamcat/joplin-plugin-note-history-diff/issues/1)).
+- An empty line was copied as a non-breaking space.
+
 ## [1.0.0] - 2026-11-26
 
 First release.
