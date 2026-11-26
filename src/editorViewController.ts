@@ -63,59 +63,54 @@ function wait(ms: number): Promise<void> {
 	return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// One editor view. Joplin creates one per window that has a note editor (the
-// main window and each note opened in its own window), and each one has its
-// own note, visibility and history state (v0.3.7 test: a single shared state
-// made the main window stay on "loading" once a second window was opened).
-interface HistoryView {
-	handle: string;
-	label: string;
-	// The note shown in this view's window, from the activation checks.
-	noteId: string | null;
-	// The note whose history this view shows, or null when it shows none.
-	historyNoteId: string | null;
-	generation: number;
-	closing: boolean;
-	setupAt: number;
-	firstShownSeen: boolean;
-	// Was the view remembered as open when it was set up? null: unknown.
-	reopenExpected: boolean | null;
-	// Joplin remembers that the view was open and re-opens it by itself after
-	// a note change or a restart (v0.3.1 test). Those openings must not be
-	// mistaken for the user pressing Joplin's "toggle editor" button.
-	lastNoteChangeAt: number;
-	// Whether the view was shown, or remembered as shown, when the note last
-	// changed. Only then does Joplin re-open it by itself (v0.3.5 / v0.3.6 tests).
-	shownAtNoteChange: boolean;
-}
+// Joplin creates one editor view per window that has a note editor: the main
+// window's first, with a handle ending in "-default" (Joplin's
+// `defaultWindowId`), then one for each note opened in its own window. Only
+// the main window's view shows the history (spec section 4); the others
+// answer "not active", so Joplin's "toggle editor" button does not show there.
+// v0.3.7 kept a single handle, and a second window overwrote it (the main
+// window then stayed on "loading").
+const MAIN_WINDOW_HANDLE_SUFFIX = `-${VIEW_ID}-default`;
 
-// A request from the history command, waiting for the view of the focused
-// window to become visible (which view that is cannot be asked directly).
-interface PendingShow {
-	noteId: string;
-	at: number;
+function isMainWindowHandle(handle: string): boolean {
+	return handle.endsWith(MAIN_WINDOW_HANDLE_SUFFIX);
 }
-const PENDING_SHOW_MS = 3000;
 
 export async function registerHistoryEditorView(): Promise<void> {
 	const strings = stringsFor(await globalSetting('locale'));
 	// Was the view left open when Joplin was last closed? null: unknown.
 	const shownAtStart = await globalSetting(SHOWN_EDITOR_VIEWS_SETTING);
+	const reopenExpected = viewRememberedAsShown(shownAtStart);
 	const repository = new RevisionRepository(joplinRevisionFetcher);
-	const views = new Map<string, HistoryView>();
-	let pendingShow: PendingShow | null = null;
 
+	// The main window's view.
+	let viewHandle: string | null = null;
+	// The note shown in the main window, from the activation checks.
+	let windowNoteId: string | null = null;
+	// The note whose history the view shows, or null when it shows none.
+	let historyNoteId: string | null = null;
+	let generation = 0;
+	// Joplin remembers that the view was open and re-opens it by itself after
+	// a note change or a restart (v0.3.1 test). Those openings must not be
+	// mistaken for the user pressing Joplin's "toggle editor" button.
+	let lastNoteChangeAt = 0;
+	// Whether the view was shown, or remembered as shown, when the note last
+	// changed. Only then does Joplin re-open it by itself (v0.3.5 / v0.3.6 tests).
+	let shownAtNoteChange = false;
+	let firstShownSeen = false;
+	let closing = false;
+	let setupAt = 0;
+	let otherViews = 0;
 	// Diagnostics for the verification of the editor view behaviour.
 	const log: string[] = [];
-	const note = (view: HistoryView | null, line: string) => {
-		const text = view ? `[${view.label}] ${line}` : line;
-		log.push(`${new Date().toLocaleTimeString()} ${text}`);
-		if (log.length > 40) log.shift();
-		console.info(`Note History Diff: ${text}`);
+	const note = (line: string) => {
+		log.push(`${new Date().toLocaleTimeString()} ${line}`);
+		if (log.length > 30) log.shift();
+		console.info(`Note History Diff: ${line}`);
 	};
 
-	const render = async (view: HistoryView, state: PanelState) => {
-		await joplin.views.editors.setHtml(view.handle, renderPanel(state, strings));
+	const render = async (state: PanelState) => {
+		if (viewHandle) await joplin.views.editors.setHtml(viewHandle, renderPanel(state, strings));
 	};
 
 	const computeState = async (noteId: string): Promise<PanelState> => {
@@ -140,9 +135,10 @@ export async function registerHistoryEditorView(): Promise<void> {
 		}
 	};
 
-	const refresh = async (view: HistoryView, noteId: string) => {
-		const mine = ++view.generation;
-		await render(view, { kind: 'loading' });
+	const refresh = async (noteId: string, options: { reloadHistory?: boolean } = {}) => {
+		const mine = ++generation;
+		if (options.reloadHistory) repository.invalidate();
+		await render({ kind: 'loading' });
 		let state: PanelState;
 		try {
 			state = await computeState(noteId);
@@ -150,169 +146,138 @@ export async function registerHistoryEditorView(): Promise<void> {
 			console.error('Note History Diff: could not compute the diff', error);
 			state = { kind: 'error', message: errorMessage(error) };
 		}
-		if (mine === view.generation) await render(view, state);
+		if (mine === generation) await render(state);
 	};
 
-	const isVisible = async (view: HistoryView) => {
+	const isVisible = async () => {
+		if (!viewHandle) return false;
 		try {
-			return await joplin.views.editors.isVisible(view.handle);
+			return await joplin.views.editors.isVisible(viewHandle);
 		} catch (error) {
 			return false;
 		}
 	};
 
-	const showHistory = async (view: HistoryView, noteId: string, options: { reloadHistory?: boolean } = {}) => {
-		view.historyNoteId = noteId;
-		if (options.reloadHistory) repository.invalidate();
-		await refresh(view, noteId);
-	};
-
 	// Switches back to the normal editor. Returns false if the view is still shown.
-	// `toggleEditorPlugin` acts on the focused window, which is the window where
-	// the user acted (closed, changed the note) in every case that calls this.
-	const close = async (view: HistoryView, why: string): Promise<boolean> => {
-		note(view, `close (${why})`);
-		view.historyNoteId = null;
-		view.generation++; // drop any diff still being computed
-		if (!(await isVisible(view))) return true;
+	// `toggleEditorPlugin` acts on the focused window; every caller follows an
+	// action in the main window (Close, a note change, Joplin re-opening the view).
+	const close = async (why: string): Promise<boolean> => {
+		note(`close (${why})`);
+		historyNoteId = null;
+		generation++; // drop any diff still being computed
+		if (!(await isVisible())) return true;
 		// Leave something readable behind in case switching back does not happen.
-		await render(view, { kind: 'loading' });
-		view.closing = true;
+		await render({ kind: 'loading' });
+		closing = true;
 		try {
 			for (let attempt = 1; attempt <= 2; attempt++) {
 				await joplin.commands.execute('toggleEditorPlugin');
 				await wait(300);
-				const stillVisible = await isVisible(view);
-				note(view, `after toggleEditorPlugin (attempt ${attempt}): visible=${stillVisible}`);
+				const stillVisible = await isVisible();
+				note(`after toggleEditorPlugin (attempt ${attempt}): visible=${stillVisible}`);
 				if (!stillVisible) return true;
 			}
 			return false;
 		} finally {
-			view.closing = false;
+			closing = false;
 		}
+	};
+
+	const showHistory = async (noteId: string) => {
+		historyNoteId = noteId;
+		await refresh(noteId);
 	};
 
 	// An opening that looks automatic: switch back, or if that does not work,
 	// show the history rather than leaving "loading" on the screen (v0.3.3 test).
-	const closeAutoOpened = async (view: HistoryView, why: string, noteId: string) => {
-		if (!(await close(view, why))) {
-			note(view, 'could not switch back: showing the history instead');
-			await showHistory(view, noteId);
+	const closeAutoOpened = async (why: string, noteId: string) => {
+		if (!(await close(why))) {
+			note('could not switch back: showing the history instead');
+			await showHistory(noteId);
 		}
-	};
-
-	const takePendingShow = (noteId: string): boolean => {
-		if (!pendingShow || pendingShow.noteId !== noteId || Date.now() - pendingShow.at > PENDING_SHOW_MS) return false;
-		pendingShow = null;
-		return true;
 	};
 
 	// The view became visible: by Joplin's update or by the view's own "shown"
 	// message, whichever comes first (Joplin does not always send an update).
-	const handleShown = async (view: HistoryView, noteId: string | null, source: 'update' | 'webview') => {
-		const visible = await isVisible(view);
-		note(view, `${source === 'update' ? 'onUpdate' : 'webview shown'} visible=${visible} note=${!noteId ? 'none' : noteId === view.historyNoteId ? 'history note' : 'other'}${view.closing ? ' (closing)' : ''}`);
-		if (!visible || !noteId || view.closing) return;
-		if (noteId === view.historyNoteId) {
+	const handleShown = async (noteId: string | null, source: 'update' | 'webview') => {
+		const visible = await isVisible();
+		note(`${source === 'update' ? 'onUpdate' : 'webview shown'} visible=${visible} note=${!noteId ? 'none' : noteId === historyNoteId ? 'history note' : 'other'}${closing ? ' (closing)' : ''}`);
+		if (!visible || !noteId || closing) return;
+		if (noteId === historyNoteId) {
 			// Already showing this note's history. An update means the note may have changed.
-			if (source === 'update') await refresh(view, noteId);
+			if (source === 'update') await refresh(noteId);
 			return;
 		}
-		const first = !view.firstShownSeen;
-		view.firstShownSeen = true;
-		if (takePendingShow(noteId)) {
-			note(view, 'shown by the history command');
-			await showHistory(view, noteId, { reloadHistory: true });
-			return;
-		}
-		const startupReopen = first && (view.reopenExpected === null
-			? Date.now() - view.setupAt < STARTUP_REOPEN_WINDOW_MS
-			: view.reopenExpected);
+		const first = !firstShownSeen;
+		firstShownSeen = true;
+		const startupReopen = first && (reopenExpected === null
+			? Date.now() - setupAt < STARTUP_REOPEN_WINDOW_MS
+			: reopenExpected);
 		if (startupReopen) {
-			await closeAutoOpened(view, 're-opened by Joplin at startup', noteId);
+			await closeAutoOpened('re-opened by Joplin at startup', noteId);
 			return;
 		}
-		const sinceNoteChange = Date.now() - view.lastNoteChangeAt;
-		const noteChangeReopen = view.shownAtNoteChange && sinceNoteChange < AUTO_REOPEN_WINDOW_MS;
-		view.shownAtNoteChange = false;
+		const sinceNoteChange = Date.now() - lastNoteChangeAt;
+		const noteChangeReopen = shownAtNoteChange && sinceNoteChange < AUTO_REOPEN_WINDOW_MS;
+		shownAtNoteChange = false;
 		if (noteChangeReopen) {
-			await closeAutoOpened(view, 're-opened by Joplin after a note change', noteId);
+			await closeAutoOpened('re-opened by Joplin after a note change', noteId);
 			return;
 		}
 		// Shown by Joplin's own "toggle editor" button: show this note's history.
-		note(view, `shown by the toggle editor button (${sinceNoteChange} ms after a note change)`);
-		await showHistory(view, noteId);
+		note(`shown by the toggle editor button (${sinceNoteChange} ms after a note change)`);
+		await showHistory(noteId);
 	};
 
-	// The note of this view's window changed. Leaving the note ends the history
-	// view, like Joplin's own history viewer.
-	const handleNoteChange = async (view: HistoryView, noteId: string | null) => {
-		view.lastNoteChangeAt = Date.now();
-		const visible = await isVisible(view);
+	// The main window's note changed. Leaving the note ends the history view,
+	// like Joplin's own history viewer.
+	const handleNoteChange = async (noteId: string | null) => {
+		lastNoteChangeAt = Date.now();
+		const visible = await isVisible();
 		// Joplin destroys the webview when it is hidden, so the view cannot report
 		// that (v0.3.6 test) and historyNoteId may be stale. The setting Joplin
 		// uses to re-open the view empties on hiding (v0.3.7 test).
 		const remembered = viewRememberedAsShown(await globalSetting(SHOWN_EDITOR_VIEWS_SETTING));
-		view.shownAtNoteChange = visible || (remembered === null ? view.historyNoteId !== null : remembered);
-		note(view, `note changed (view visible=${visible}, remembered as shown=${remembered === null ? 'unknown' : remembered}, history note set=${view.historyNoteId !== null})`);
-		if (noteId !== view.historyNoteId && (view.historyNoteId || visible)) await close(view, 'note changed');
-	};
-
-	const viewFor = (handle: string): HistoryView => {
-		let view = views.get(handle);
-		if (!view) {
-			view = {
-				handle,
-				label: `view ${views.size + 1}`,
-				noteId: null,
-				historyNoteId: null,
-				generation: 0,
-				closing: false,
-				setupAt: Date.now(),
-				firstShownSeen: false,
-				reopenExpected: null,
-				lastNoteChangeAt: 0,
-				shownAtNoteChange: false,
-			};
-			views.set(handle, view);
-		}
-		return view;
+		shownAtNoteChange = visible || (remembered === null ? historyNoteId !== null : remembered);
+		note(`note changed (view visible=${visible}, remembered as shown=${remembered === null ? 'unknown' : remembered}, history note set=${historyNoteId !== null})`);
+		if (noteId !== historyNoteId && (historyNoteId || visible)) await close('note changed');
 	};
 
 	await joplin.views.editors.register(VIEW_ID, {
 		onSetup: async (handle: string) => {
-			const first = views.size === 0 || (views.size === 1 && views.has(handle));
-			const view = viewFor(handle);
-			view.setupAt = Date.now();
-			// The main window's view is set up at startup: use the setting as it was
-			// before Joplin showed anything. A later window reads it now.
-			view.reopenExpected = viewRememberedAsShown(first ? shownAtStart : await globalSetting(SHOWN_EDITOR_VIEWS_SETTING));
-			note(view, `onSetup (remembered as shown: ${view.reopenExpected === null ? 'unknown' : view.reopenExpected})`);
+			if (!isMainWindowHandle(handle)) {
+				otherViews++;
+				note('onSetup for another window: not used');
+				return;
+			}
+			viewHandle = handle;
+			setupAt = Date.now();
+			note(`onSetup (left open at the last exit: ${reopenExpected === null ? 'unknown' : reopenExpected})`);
 			await joplin.views.editors.addScript(handle, './ui/webview/panel.css');
 			await joplin.views.editors.addScript(handle, './ui/webview/panel.js');
 			await joplin.views.editors.onMessage(handle, async (message: any) => {
 				if (!message) return null;
-				if (message.type === 'close') await close(view, 'close button');
-				if (message.type === 'refresh' && view.historyNoteId) await showHistory(view, view.historyNoteId, { reloadHistory: true });
-				if (message.type === 'shown') await handleShown(view, view.noteId, 'webview');
+				if (message.type === 'close') await close('close button');
+				if (message.type === 'refresh' && historyNoteId) await refresh(historyNoteId, { reloadHistory: true });
+				if (message.type === 'shown') await handleShown(windowNoteId, 'webview');
 				return null;
 			});
 			// Called when the note changes or when the view becomes visible.
 			await joplin.views.editors.onUpdate(handle, async event => {
-				if (event.noteId) view.noteId = event.noteId;
-				await handleShown(view, event.noteId || null, 'update');
+				if (event.noteId) windowNoteId = event.noteId;
+				await handleShown(event.noteId || null, 'update');
 			});
 		},
-		// Called for each view when its window's note changes (and at startup),
-		// whether the view is shown or not.
+		// Called for each window's view when that window's note changes (and at
+		// startup), whether the view is shown or not.
 		onActivationCheck: async event => {
-			const view = viewFor(event.handle);
-			const previous = view.noteId;
+			if (!isMainWindowHandle(event.handle)) return false;
+			const previous = windowNoteId;
 			const noteId = event.noteId || null;
-			view.noteId = noteId;
-			note(view, `onActivationCheck (${previous === null ? 'first' : previous === noteId ? 'same note' : 'note changed'})`);
+			windowNoteId = noteId;
+			note(`onActivationCheck (${previous === null ? 'first' : previous === noteId ? 'same note' : 'note changed'})`);
 			// Do not hold up the activation check: closing waits for Joplin.
-			if (previous !== null && previous !== noteId) void handleNoteChange(view, noteId);
+			if (previous !== null && previous !== noteId) void handleNoteChange(noteId);
 			return !!noteId;
 		},
 	});
@@ -325,28 +290,27 @@ export async function registerHistoryEditorView(): Promise<void> {
 			// The note of the focused window.
 			const selected = await joplin.workspace.selectedNote();
 			if (!selected) return;
-			note(null, 'show requested');
-			// Views showing this note: the focused window's view is one of them.
-			const candidates = Array.from(views.values()).filter(view => view.noteId === selected.id);
-			const visibleBefore: HistoryView[] = [];
-			for (const view of candidates) {
-				if (await isVisible(view)) visibleBefore.push(view);
+			note('show requested');
+			// A note open in its own window: the main window shows another note.
+			if (windowNoteId && selected.id !== windowNoteId) {
+				note('requested from another window');
+				await joplin.views.dialogs.showMessageBox(strings.mainWindowOnly);
+				return;
 			}
-			if (!candidates.length || visibleBefore.length < candidates.length) {
-				// Shows the view of the focused window; handleShown picks it up.
-				pendingShow = { noteId: selected.id, at: Date.now() };
+			historyNoteId = selected.id;
+			if (!(await isVisible())) {
 				await joplin.commands.execute('showEditorPlugin');
 				await wait(300);
+				const visible = await isVisible();
+				note(`after showEditorPlugin: visible=${visible}`);
+				if (!visible) {
+					// The same note open in its own window, which was focused.
+					historyNoteId = null;
+					await joplin.views.dialogs.showMessageBox(strings.mainWindowOnly);
+					return;
+				}
 			}
-			let reloaded = false;
-			for (const view of candidates) {
-				if (!(await isVisible(view))) continue;
-				// Already picked up by handleShown, which reloaded the history.
-				if (view.historyNoteId === selected.id && !visibleBefore.includes(view)) continue;
-				note(view, 'showing the history for the command');
-				await showHistory(view, selected.id, { reloadHistory: !reloaded });
-				reloaded = true;
-			}
+			await refresh(selected.id, { reloadHistory: true });
 		},
 	});
 
@@ -354,21 +318,23 @@ export async function registerHistoryEditorView(): Promise<void> {
 		name: EDITOR_STATUS_COMMAND,
 		label: '[dev] Note History Diff: editor view status',
 		execute: async () => {
+			let active: any = 'unknown';
+			try {
+				active = viewHandle ? await joplin.views.editors.isActive(viewHandle) : 'no view';
+			} catch (error) {
+				active = `error: ${errorMessage(error)}`;
+			}
 			const lines = [
 				'Note History Diff: editor view status',
+				`main window view: ${viewHandle ? 'set' : 'none'} (views of other windows: ${otherViews})`,
+				`active: ${active}`,
+				`visible: ${await isVisible()}`,
+				`history note set: ${historyNoteId ? 'yes' : 'no'}`,
 				`${SHOWN_EDITOR_VIEWS_SETTING}: ${JSON.stringify(await globalSetting(SHOWN_EDITOR_VIEWS_SETTING))} (at startup: ${JSON.stringify(shownAtStart)})`,
-				`views: ${views.size}`,
+				'',
+				'Recent events:',
+				...log,
 			];
-			for (const view of views.values()) {
-				let active: any = 'unknown';
-				try {
-					active = await joplin.views.editors.isActive(view.handle);
-				} catch (error) {
-					active = `error: ${errorMessage(error)}`;
-				}
-				lines.push(`- ${view.label}: active=${active}, visible=${await isVisible(view)}, note set=${view.noteId ? 'yes' : 'no'}, history note set=${view.historyNoteId ? 'yes' : 'no'}`);
-			}
-			lines.push('', 'Recent events:', ...log);
 			await joplin.clipboard.writeText(lines.join('\n'));
 			await joplin.views.dialogs.showMessageBox(`${lines.join('\n')}\n\n(Copied to the clipboard.)`);
 		},

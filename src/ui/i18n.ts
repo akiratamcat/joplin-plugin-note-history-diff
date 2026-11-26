@@ -5,6 +5,7 @@ export interface Strings {
 	locale: string;
 	panelTitle: string;
 	commandLabel: string;
+	mainWindowOnly: string;
 	refresh: string;
 	close: string;
 	loading: string;
@@ -32,6 +33,7 @@ const en: Strings = {
 	locale: 'en',
 	panelTitle: 'Note History Diff',
 	commandLabel: 'Show note history diff',
+	mainWindowOnly: 'Note History Diff works in the main window only. Open the note in the main window to see its history.',
 	refresh: 'Refresh',
 	close: 'Close',
 	loading: 'Loading note history…',
@@ -60,6 +62,7 @@ const ja: Strings = {
 	locale: 'ja',
 	panelTitle: 'Note History Diff',
 	commandLabel: 'ノート履歴の差分を表示',
+	mainWindowOnly: 'Note History Diff はメインウィンドウでだけ使えます。履歴を見るには、ノートをメインウィンドウで開いてください。',
 	refresh: '更新',
 	close: '閉じる',
 	loading: 'ノートの履歴を読み込んでいます…',
