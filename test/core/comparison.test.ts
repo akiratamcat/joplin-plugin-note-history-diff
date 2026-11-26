@@ -1,4 +1,4 @@
-import { diffVersions, planDefaultComparison } from '../../src/core/comparison';
+import { CURRENT_KEY, diffVersions, listVersionChoices, planDefaultComparison, sideForKey } from '../../src/core/comparison';
 import { RevisionCache } from '../../src/history/revisionCache';
 import { RevisionRebuilder } from '../../src/history/revisionRebuilder';
 import { makeRevisions } from '../helpers/history';
@@ -63,5 +63,31 @@ describe('diffVersions (F5)', () => {
 		const diff = diffVersions({ title: 'a', body: 'same\n' }, { title: 'b', body: 'same\n' });
 		expect(diff.titleChanged).toBe(true);
 		expect(diff.body.added + diff.body.removed).toBe(0);
+	});
+});
+
+describe('version choices (F2)', () => {
+	const current = { ...v3, body: v3.body + '- 追記\n', updatedTime: 9 };
+
+	test('lists the current note, then the revisions newest first, with body lengths', () => {
+		const rebuilder = rebuilderOf([v1, v2, v3]);
+		const choices = listVersionChoices(rebuilder, current);
+		expect(choices.map(c => c.key)).toEqual([CURRENT_KEY, rebuilder.revisionAt(2).id, rebuilder.revisionAt(1).id, rebuilder.revisionAt(0).id]);
+		expect(choices.map(c => c.bodyLength)).toEqual([current.body.length, v3.body.length, v2.body.length, v1.body.length]);
+		expect(choices[1]).toMatchObject({ kind: 'revision', time: rebuilder.revisionAt(2).item_updated_time });
+	});
+
+	test('a revision that cannot be rebuilt, and every later one, has no length', () => {
+		const revisions = makeRevisions([v1, v2, v3]).map((r, i) => (i === 1 ? { ...r, encryption_applied: 1 } : r));
+		const rebuilder = new RevisionRebuilder(revisions, new RevisionCache(1_000_000));
+		const choices = listVersionChoices(rebuilder, current);
+		expect(choices.map(c => c.bodyLength)).toEqual([current.body.length, null, null, v1.body.length]);
+	});
+
+	test('sideForKey finds the current note and revisions by id, and null for an unknown key', () => {
+		const rebuilder = rebuilderOf([v1, v2, v3]);
+		expect(sideForKey(rebuilder, current, CURRENT_KEY)).toMatchObject({ kind: 'current', version: { body: current.body } });
+		expect(sideForKey(rebuilder, current, rebuilder.revisionAt(0).id)).toMatchObject({ kind: 'revision', index: 0, version: v1 });
+		expect(sideForKey(rebuilder, current, 'gone')).toBeNull();
 	});
 });

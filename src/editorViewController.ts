@@ -1,10 +1,11 @@
 import joplin from 'api';
 import { MenuItemLocation, ToolbarButtonLocation } from 'api/types';
-import { diffVersions, planDefaultComparison } from './core/comparison';
+import { ComparisonSide, CurrentNote, diffVersions, listVersionChoices, planDefaultComparison, sideForKey, sideKey, VersionChoice } from './core/comparison';
+import { RebuildError, RevisionRebuilder } from './history/revisionRebuilder';
 import { joplinRevisionFetcher } from './history/joplinFetcher';
 import { RevisionRepository } from './history/revisionRepository';
 import { stringsFor } from './ui/i18n';
-import { PanelState, renderPanel } from './ui/panelView';
+import { ComparisonExplanation, PanelState, renderPanel } from './ui/panelView';
 
 // Shows the note history diff in the editor area (where the note editor is),
 // like Joplin's own "Note history" view, using the editor plugin API.
@@ -76,6 +77,18 @@ function isMainWindowHandle(handle: string): boolean {
 	return handle.endsWith(MAIN_WINDOW_HANDLE_SUFFIX);
 }
 
+// The history shown in the view, kept so that picking other versions (F2)
+// only recomputes the diff from the rebuilt versions (spec section 5, step 3).
+interface Session {
+	noteId: string;
+	rebuilder: RevisionRebuilder;
+	current: CurrentNote;
+	choices: VersionChoice[];
+	fromKey: string;
+	toKey: string;
+	explanation: ComparisonExplanation;
+}
+
 export async function registerHistoryEditorView(): Promise<void> {
 	const strings = stringsFor(await globalSetting('locale'));
 	// Was the view left open when Joplin was last closed? null: unknown.
@@ -113,10 +126,38 @@ export async function registerHistoryEditorView(): Promise<void> {
 		if (viewHandle) await joplin.views.editors.setHtml(viewHandle, renderPanel(state, strings));
 	};
 
-	const computeState = async (noteId: string): Promise<PanelState> => {
-		const current = await joplin.data.get(['notes', noteId], { fields: ['id', 'title', 'body', 'updated_time'] });
+	let session: Session | null = null;
+
+	const resultState = (current: Session, from: ComparisonSide, to: ComparisonSide): PanelState => ({
+		kind: 'result',
+		choices: current.choices,
+		fromKey: current.fromKey,
+		toKey: current.toKey,
+		diff: diffVersions(from.version, to.version),
+		explanation: current.explanation,
+	});
+
+	// Compares the versions the session has selected.
+	const sessionState = (current: Session): PanelState => {
+		try {
+			const from = sideForKey(current.rebuilder, current.current, current.fromKey);
+			const to = sideForKey(current.rebuilder, current.current, current.toKey);
+			if (!from || !to) return { kind: 'error', message: 'The selected version no longer exists.' };
+			return resultState(current, from, to);
+		} catch (error) {
+			if (error instanceof RebuildError) return { kind: 'rebuild-failed', reason: error.reason };
+			throw error;
+		}
+	};
+
+	// Loads the note and its history. `keep` carries the versions the user
+	// picked over a reload ("Refresh"), when they still exist.
+	const computeState = async (noteId: string, keep: { fromKey: string; toKey: string } | null): Promise<PanelState> => {
+		session = null;
+		const row = await joplin.data.get(['notes', noteId], { fields: ['id', 'title', 'body', 'updated_time'] });
+		const current: CurrentNote = { title: row.title, body: row.body, updatedTime: row.updated_time };
 		const rebuilder = await repository.rebuilderFor(noteId);
-		const plan = planDefaultComparison(rebuilder, { title: current.title, body: current.body, updatedTime: current.updated_time });
+		const plan = planDefaultComparison(rebuilder, current);
 		switch (plan.kind) {
 		case 'no-history':
 			return await historySettings();
@@ -124,24 +165,52 @@ export async function registerHistoryEditorView(): Promise<void> {
 			return { kind: 'nothing-to-compare' };
 		case 'rebuild-failed':
 			return { kind: 'rebuild-failed', reason: plan.error.reason };
-		case 'compare':
-			return {
-				kind: 'result',
-				from: { kind: plan.from.kind, time: plan.from.time },
-				to: { kind: plan.to.kind, time: plan.to.time },
-				diff: diffVersions(plan.from.version, plan.to.version),
-				previousVsLatest: plan.to.kind === 'revision',
+		case 'compare': {
+			const choices = listVersionChoices(rebuilder, current);
+			const usable = (key: string) => choices.some(choice => choice.key === key && choice.bodyLength !== null);
+			const kept = keep && usable(keep.fromKey) && usable(keep.toKey);
+			const next: Session = {
+				noteId,
+				rebuilder,
+				current,
+				choices,
+				fromKey: kept ? keep.fromKey : sideKey(plan.from),
+				toKey: kept ? keep.toKey : sideKey(plan.to),
+				explanation: kept ? null : plan.to.kind === 'revision' ? 'previous-vs-latest' : 'latest-vs-current',
 			};
+			session = next;
+			return kept ? sessionState(next) : resultState(next, plan.from, plan.to);
+		}
 		}
 	};
 
 	const refresh = async (noteId: string, options: { reloadHistory?: boolean } = {}) => {
 		const mine = ++generation;
+		// Keep the picked versions when reloading the same note.
+		const keep = session && session.noteId === noteId && session.explanation === null
+			? { fromKey: session.fromKey, toKey: session.toKey } : null;
 		if (options.reloadHistory) repository.invalidate();
 		await render({ kind: 'loading' });
 		let state: PanelState;
 		try {
-			state = await computeState(noteId);
+			state = await computeState(noteId, keep);
+		} catch (error) {
+			console.error('Note History Diff: could not compute the diff', error);
+			state = { kind: 'error', message: errorMessage(error) };
+		}
+		if (mine === generation) await render(state);
+	};
+
+	// F2: the user picked other versions.
+	const select = async (fromKey: string, toKey: string) => {
+		if (!session || session.noteId !== historyNoteId) return;
+		session.fromKey = fromKey;
+		session.toKey = toKey;
+		session.explanation = null;
+		const mine = ++generation;
+		let state: PanelState;
+		try {
+			state = sessionState(session);
 		} catch (error) {
 			console.error('Note History Diff: could not compute the diff', error);
 			state = { kind: 'error', message: errorMessage(error) };
@@ -260,6 +329,7 @@ export async function registerHistoryEditorView(): Promise<void> {
 				if (message.type === 'close') await close('close button');
 				if (message.type === 'refresh' && historyNoteId) await refresh(historyNoteId, { reloadHistory: true });
 				if (message.type === 'shown') await handleShown(windowNoteId, 'webview');
+				if (message.type === 'select' && typeof message.from === 'string' && typeof message.to === 'string') await select(message.from, message.to);
 				return null;
 			});
 			// Called when the note changes or when the view becomes visible.

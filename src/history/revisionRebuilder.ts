@@ -16,6 +16,10 @@ export class RebuildError extends Error {
 	}
 }
 
+export type VersionSummary =
+	| { index: number; ok: true; bodyLength: number }
+	| { index: number; ok: false; reason: RebuildFailure };
+
 const EMPTY: NoteVersion = { title: '', body: '' };
 
 // Cache key: a revision can be rewritten by Joplin (for example when older
@@ -71,6 +75,34 @@ export class RevisionRebuilder {
 			}
 		}
 		return version;
+	}
+
+	// Walks every revision once, oldest first, and reports the body length of
+	// each version (F2: the version list shows it). A revision that cannot be
+	// rebuilt breaks the chain, so it and every later one are reported as
+	// failed. Checkpoints met on the way are cached, like `versionAt` does.
+	public scan(): VersionSummary[] {
+		const summaries: VersionSummary[] = [];
+		let version = EMPTY;
+		let failure: RebuildError | null = null;
+		for (let i = 0; i < this.revisions.length; i++) {
+			if (!failure) {
+				const cached = this.cache.get(cacheKey(this.revisions[i]));
+				try {
+					version = cached || this.applyRevision(version, i);
+					if (!cached && ((i + 1) % this.checkpointInterval === 0 || i === this.revisions.length - 1)) {
+						this.cache.set(cacheKey(this.revisions[i]), version);
+					}
+				} catch (error) {
+					if (!(error instanceof RebuildError)) throw error;
+					failure = error;
+				}
+			}
+			summaries.push(failure
+				? { index: i, ok: false, reason: failure.reason }
+				: { index: i, ok: true, bodyLength: version.body.length });
+		}
+		return summaries;
 	}
 
 	private applyRevision(previous: NoteVersion, index: number): NoteVersion {

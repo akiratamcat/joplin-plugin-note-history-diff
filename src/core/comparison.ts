@@ -65,3 +65,42 @@ export function diffVersions(from: NoteVersion, to: NoteVersion): VersionDiff {
 		body: lineDiff(from.body, to.body),
 	};
 }
+
+// F2: a version the user can pick as the "from" or "to" side. The key is
+// stable across reloads: a revision's id (revision indexes shift when older
+// revisions expire), or CURRENT_KEY for the note as it is now.
+export const CURRENT_KEY = 'current';
+
+export interface VersionChoice {
+	key: string;
+	kind: 'revision' | 'current';
+	time: number;
+	// Body length in characters, or null when the revision cannot be rebuilt.
+	bodyLength: number | null;
+}
+
+export function sideKey(side: ComparisonSide): string {
+	return side.kind === 'current' ? CURRENT_KEY : side.revisionId;
+}
+
+// Every version, newest first: the current note, then the revisions.
+export function listVersionChoices(rebuilder: RevisionRebuilder, current: CurrentNote): VersionChoice[] {
+	const choices: VersionChoice[] = [{ key: CURRENT_KEY, kind: 'current', time: current.updatedTime, bodyLength: current.body.length }];
+	const summaries = rebuilder.scan();
+	for (let i = summaries.length - 1; i >= 0; i--) {
+		const summary = summaries[i];
+		const revision = rebuilder.revisionAt(i);
+		choices.push({ key: revision.id, kind: 'revision', time: revision.item_updated_time, bodyLength: summary.ok ? summary.bodyLength : null });
+	}
+	return choices;
+}
+
+// The side for a key from `listVersionChoices`, or null when no version has
+// that key (any more). Throws RebuildError when the revision cannot be rebuilt.
+export function sideForKey(rebuilder: RevisionRebuilder, current: CurrentNote, key: string): ComparisonSide | null {
+	if (key === CURRENT_KEY) return { kind: 'current', time: current.updatedTime, version: { title: current.title, body: current.body } };
+	for (let i = 0; i < rebuilder.length; i++) {
+		if (rebuilder.revisionAt(i).id === key) return revisionSide(rebuilder, i);
+	}
+	return null;
+}

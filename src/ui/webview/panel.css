@@ -39,20 +39,33 @@ body {
 	margin: 4px 0 8px;
 }
 
-.nhd table.sides {
-	border-collapse: collapse;
-	font-size: 0.95em;
+/* F2: version pickers. */
+.nhd .pickers {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px 16px;
+	margin: 4px 0;
 }
 
-.nhd table.sides th {
-	text-align: left;
-	font-weight: normal;
+.nhd .picker {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	max-width: 100%;
+}
+
+.nhd .picker span {
 	opacity: 0.7;
-	padding: 1px 12px 1px 0;
 }
 
-.nhd table.sides td {
-	padding: 1px 0;
+.nhd .picker select {
+	max-width: 100%;
+	font: inherit;
+	color: inherit;
+	background-color: var(--joplin-background-color, #fff);
+	border: 1px solid var(--joplin-divider-color, #ccc);
+	border-radius: 4px;
+	padding: 2px 4px;
 }
 
 .nhd .section-label {

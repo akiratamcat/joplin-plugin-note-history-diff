@@ -65,4 +65,22 @@ describe('RevisionRebuilder', () => {
 		expect(() => rebuilder.versionAt(-1)).toThrow(RangeError);
 		expect(() => rebuilder.versionAt(35)).toThrow(RangeError);
 	});
+
+	test('scan reports every body length in one pass and stores the checkpoints', () => {
+		const cache = new RevisionCache(1_000_000);
+		const rebuilder = new RevisionRebuilder(revisions, cache, 10);
+		const summaries = rebuilder.scan();
+		expect(summaries).toEqual(versions.map((v, index) => ({ index, ok: true, bodyLength: v.body.length })));
+		// Checkpoints at indexes 9, 19, 29 plus the latest version.
+		expect(cache.size).toBe(4);
+		for (const i of [9, 19, 29, 34]) expect(cache.has(cacheKey(revisions[i]))).toBe(true);
+		expect(rebuilder.versionAt(34)).toEqual(versions[34]);
+	});
+
+	test('scan marks a revision that cannot be rebuilt and every later one', () => {
+		const broken = revisions.map((r, i) => (i === 5 ? { ...r, encryption_applied: 1 } : r));
+		const summaries = new RevisionRebuilder(broken, new RevisionCache(1_000_000), 10).scan();
+		expect(summaries[4]).toEqual({ index: 4, ok: true, bodyLength: versions[4].body.length });
+		expect(summaries.slice(5).every(s => !s.ok && 'reason' in s && s.reason === 'encrypted')).toBe(true);
+	});
 });

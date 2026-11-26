@@ -12,6 +12,16 @@
 		webviewApi.postMessage({ type: target.getAttribute('data-action') });
 	});
 
+	// F2: picking another version sends both sides; the plugin recomputes the diff.
+	document.addEventListener('change', function(event) {
+		const target = event.target;
+		if (!target || !target.matches || !target.matches('select[data-select]')) return;
+		const from = document.querySelector('select[data-select="from"]');
+		const to = document.querySelector('select[data-select="to"]');
+		if (!from || !to) return;
+		webviewApi.postMessage({ type: 'select', from: from.value, to: to.value });
+	});
+
 	let visible = false;
 	function setVisible(now) {
 		if (now && !visible) webviewApi.postMessage({ type: 'shown' });

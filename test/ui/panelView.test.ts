@@ -1,6 +1,6 @@
-import { diffVersions } from '../../src/core/comparison';
+import { CURRENT_KEY, diffVersions, VersionChoice, VersionDiff } from '../../src/core/comparison';
 import { stringsFor } from '../../src/ui/i18n';
-import { renderPanel } from '../../src/ui/panelView';
+import { ComparisonExplanation, renderPanel } from '../../src/ui/panelView';
 
 const ja = stringsFor('ja_JP');
 const en = stringsFor('en_GB');
@@ -42,11 +42,17 @@ describe('renderPanel', () => {
 		expect(renderPanel({ kind: 'rebuild-failed', reason: 'invalid-patch' }, en)).toContain('invalid-patch');
 	});
 
-	test('result: sides, stats, title diff and both layouts, with HTML escaped', () => {
+	const choices: VersionChoice[] = [
+		{ key: CURRENT_KEY, kind: 'current', time: 0, bodyLength: 1234 },
+		{ key: 'rev-2', kind: 'revision', time: 0, bodyLength: 10 },
+		{ key: 'rev-1', kind: 'revision', time: 0, bodyLength: null },
+	];
+	const result = (diff: VersionDiff, fromKey: string, toKey: string, explanation: ComparisonExplanation) =>
+		renderPanel({ kind: 'result', choices, fromKey, toKey, diff, explanation }, en);
+
+	test('result: stats, title diff and both layouts, with HTML escaped', () => {
 		const diff = diffVersions({ title: 'Plan', body: 'a\n<b>\n' }, { title: 'Plan <final>', body: 'a\n<c>\n' });
-		const html = renderPanel({ kind: 'result', from: { kind: 'revision', time: 0 }, to: { kind: 'current', time: 0 }, diff, previousVsLatest: false }, en);
-		expect(html).toContain(en.currentNote);
-		expect(html).toContain('Revision ');
+		const html = result(diff, 'rev-2', CURRENT_KEY, 'latest-vs-current');
 		expect(html).toContain('+1 / −1 lines');
 		expect(html).toContain('Plan &lt;final&gt;');
 		expect(html).toContain('&lt;c&gt;');
@@ -56,14 +62,35 @@ describe('renderPanel', () => {
 		expect(html).toContain(en.latestVsCurrent);
 	});
 
+	test('result: version pickers (F2) list every version, select the compared ones and disable unreadable ones', () => {
+		const diff = diffVersions({ title: 'T', body: 'x\n' }, { title: 'T', body: 'y\n' });
+		const html = result(diff, 'rev-2', CURRENT_KEY, null);
+		expect(html).toContain('data-select="from"');
+		expect(html).toContain('data-select="to"');
+		expect(html).toContain('<option value="current" selected>Current note（1,234 chars）</option>');
+		expect(html).toContain('<option value="rev-2" selected>');
+		expect(html).toContain('<option value="rev-1" disabled>');
+		expect(html).toContain('cannot be read');
+		// No explanation once the user picked the versions.
+		expect(html).not.toContain(en.latestVsCurrent);
+		expect(html).not.toContain(en.previousVsLatest);
+	});
+
+	test('result: the same version on both sides shows a message instead of a diff', () => {
+		const diff = diffVersions({ title: 'T', body: 'x\n' }, { title: 'T', body: 'x\n' });
+		const html = result(diff, 'rev-2', 'rev-2', null);
+		expect(html).toContain(en.sameVersion);
+		expect(html).not.toContain('class="diff"');
+	});
+
 	test('result: no title section when the title is unchanged; body-unchanged message for title-only edits', () => {
 		const same = diffVersions({ title: 'T', body: 'x\n' }, { title: 'T', body: 'y\n' });
-		const sameHtml = renderPanel({ kind: 'result', from: { kind: 'revision', time: 0 }, to: { kind: 'revision', time: 0 }, diff: same, previousVsLatest: true }, ja);
+		const sameHtml = renderPanel({ kind: 'result', choices, fromKey: 'rev-1', toKey: 'rev-2', diff: same, explanation: 'previous-vs-latest' }, ja);
 		expect(sameHtml).not.toContain('title-diff');
 		expect(sameHtml).toContain(ja.previousVsLatest);
 
 		const titleOnly = diffVersions({ title: 'A', body: 'x\n' }, { title: 'B', body: 'x\n' });
-		const titleHtml = renderPanel({ kind: 'result', from: { kind: 'revision', time: 0 }, to: { kind: 'current', time: 0 }, diff: titleOnly, previousVsLatest: false }, ja);
+		const titleHtml = renderPanel({ kind: 'result', choices, fromKey: 'rev-2', toKey: CURRENT_KEY, diff: titleOnly, explanation: 'latest-vs-current' }, ja);
 		expect(titleHtml).toContain('title-diff');
 		expect(titleHtml).toContain(ja.bodyUnchanged);
 	});

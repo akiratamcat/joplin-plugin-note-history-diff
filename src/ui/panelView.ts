@@ -1,11 +1,10 @@
-import { VersionDiff } from '../core/comparison';
+import { VersionChoice, VersionDiff } from '../core/comparison';
 import { escapeHtml, renderDiffViews } from './diffView';
 import { Strings } from './i18n';
 
-export interface SideInfo {
-	kind: 'revision' | 'current';
-	time: number;
-}
+// Why the default comparison (F1) compares what it compares; null once the
+// user picked the versions (F2).
+export type ComparisonExplanation = 'latest-vs-current' | 'previous-vs-latest' | null;
 
 // Everything the panel can show. The controller decides the state; this module only renders it.
 export type PanelState =
@@ -15,14 +14,29 @@ export type PanelState =
 	| { kind: 'nothing-to-compare' }
 	| { kind: 'rebuild-failed'; reason: string }
 	| { kind: 'error'; message: string }
-	| { kind: 'result'; from: SideInfo; to: SideInfo; diff: VersionDiff; previousVsLatest: boolean };
+	| { kind: 'result'; choices: VersionChoice[]; fromKey: string; toKey: string; diff: VersionDiff; explanation: ComparisonExplanation };
 
 function formatTime(ms: number, strings: Strings): string {
 	return new Date(ms).toLocaleString(strings.locale === 'ja' ? 'ja-JP' : undefined);
 }
 
-function sideLabel(side: SideInfo, strings: Strings): string {
-	return side.kind === 'current' ? strings.currentNote : strings.revision(formatTime(side.time, strings));
+function choiceLabel(choice: VersionChoice, strings: Strings): string {
+	const name = choice.kind === 'current' ? strings.currentNote : strings.revision(formatTime(choice.time, strings));
+	const size = choice.bodyLength === null ? strings.unavailable : strings.chars(choice.bodyLength);
+	return `${name}（${size}）`;
+}
+
+// F2: a version picker. Revisions that cannot be rebuilt are listed but disabled.
+function picker(name: 'from' | 'to', label: string, choices: VersionChoice[], selectedKey: string, strings: Strings): string {
+	const options = choices.map(choice => {
+		const attributes = [
+			`value="${escapeHtml(choice.key)}"`,
+			choice.key === selectedKey ? 'selected' : '',
+			choice.bodyLength === null ? 'disabled' : '',
+		].filter(Boolean).join(' ');
+		return `<option ${attributes}>${escapeHtml(choiceLabel(choice, strings))}</option>`;
+	}).join('');
+	return `<label class="picker"><span>${escapeHtml(label)}</span><select data-select="${name}">${options}</select></label>`;
 }
 
 function toolbar(strings: Strings): string {
@@ -58,13 +72,17 @@ function renderBody(diff: VersionDiff, strings: Strings): string {
 
 function renderResult(state: Extract<PanelState, { kind: 'result' }>, strings: Strings): string {
 	const { diff } = state;
-	return `
-	<table class="sides">
-		<tr><th>${escapeHtml(strings.from)}</th><td>${escapeHtml(sideLabel(state.from, strings))}</td></tr>
-		<tr><th>${escapeHtml(strings.to)}</th><td>${escapeHtml(sideLabel(state.to, strings))}</td></tr>
-	</table>
-	<p class="meta">${escapeHtml(state.previousVsLatest ? strings.previousVsLatest : strings.latestVsCurrent)}
-		· <strong>${escapeHtml(strings.lineStats(diff.body.added, diff.body.removed))}</strong></p>
+	const pickers = `
+	<div class="pickers">
+		${picker('from', strings.from, state.choices, state.fromKey, strings)}
+		${picker('to', strings.to, state.choices, state.toKey, strings)}
+	</div>`;
+	if (state.fromKey === state.toKey) return `${pickers}${message(strings.sameVersion)}`;
+	const explanation = state.explanation === 'previous-vs-latest' ? strings.previousVsLatest
+		: state.explanation === 'latest-vs-current' ? strings.latestVsCurrent : '';
+	const stats = `<strong>${escapeHtml(strings.lineStats(diff.body.added, diff.body.removed))}</strong>`;
+	return `${pickers}
+	<p class="meta">${explanation ? `${escapeHtml(explanation)} · ` : ''}${stats}</p>
 	${renderTitle(diff, strings)}
 	${renderBody(diff, strings)}`;
 }
