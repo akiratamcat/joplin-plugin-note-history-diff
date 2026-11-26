@@ -405,12 +405,40 @@ v0.3.7 での変更：
 
 ### v0.3.7 で確かめること
 
-| 項目 | 期待 |
-| --- | --- |
-| 同じノートで切り替えボタンを繰り返す → ノート表示で止める → 別のノートを開く → すぐ（2 秒以内）に切り替えボタン | そのノートの履歴が出る |
-| 同じ操作で、別のノートを開いてから少し待って切り替えボタン | そのノートの履歴が出る |
-| 表示したまま別のノートを開く | 元のエディタで開く（v0.3.1 の不具合が戻っていないこと） |
-| 履歴ボタン →「閉じる」→ 切り替えボタン | そのノートの履歴が出る |
-| 起動直後の切り替え、表示したまま再起動、履歴ボタンと「閉じる」 | これまでどおり |
+v0.3.7がインストールされている事を確認してから下記を実施した。
 
-うまくいかなかったときは、「[dev] Note History Diff: editor view status」の内容を送ってください。「表示したまま別のノートを開く」の記録（`remembered as shown=true` になっているか）も、うまくいった場合でも一度送ってもらえると、判断の根拠を確かめられる。
+| 項目                                                                                                            | 期待                                                    | 結果       |
+| --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- | ---------- |
+| 同じノートで切り替えボタンを繰り返す → ノート表示で止める → 別のノートを開く → すぐ（2 秒以内）に切り替えボタン | そのノートの履歴が出る                                  | 期待通り。 |
+| 同じ操作で、別のノートを開いてから少し待って切り替えボタン                                                      | そのノートの履歴が出る                                  | 期待通り。 |
+| 表示したまま別のノートを開く                                                                                    | 元のエディタで開く（v0.3.1 の不具合が戻っていないこと） | 期待通り。 |
+| 履歴ボタン →「閉じる」→ 切り替えボタン                                                                          | そのノートの履歴が出る                                  | 期待通り。 |
+| 起動直後の切り替え、表示したまま再起動、履歴ボタンと「閉じる」                                                  | これまでどおり                                          | 期待通り。 |
+
+うまくいかなかったときは、「[dev] Note History Diff: editor view status」の内容を送ってください。
+「表示したまま別のノートを開く」の記録（`remembered as shown=true` になっているか）も、うまくいった場合でも一度送ってもらえると、判断の根拠を確かめられる。
+
+「表示したまま別のノートを開く」の記録：
+
+```text
+Note History Diff: editor view status
+view handle: set
+active: true
+visible: false
+history note set: no
+plugins.shownEditorViewIds: [] (at startup: [])
+
+Recent events:
+10:43:18 onSetup (left open at the last exit: false)
+10:43:18 note changed (view visible=false, remembered as shown=false, history note set=false)
+10:43:29 onActivationCheck → true
+10:43:32 webview shown visible=true note=other
+10:43:32 shown by the toggle editor button (13514 ms after a note change)
+10:43:32 onUpdate visible=true note=history note
+10:43:36 note changed (view visible=true, remembered as shown=true, history note set=true)
+10:43:36 close (note changed)
+10:43:37 onActivationCheck → true
+10:43:37 after toggleEditorPlugin (attempt 1): visible=false
+```
+
+---
