@@ -870,3 +870,31 @@ v1.0.1 の確認：すべての項目が期待どおり（2026-11-26）。右ク
 - 2026-11-26、Joplin フォーラムの Plugins カテゴリに紹介を投稿した。登録したばかりのアカウントだったため、フォーラムの自動対策でアカウントが一時保留になり、運営スタッフの確認を経て、翌 11-27 に公開された：<https://discourse.joplinapp.org/t/note-history-diff-compare-two-revisions-of-a-note-side-by-side/51706>
 - 要望のスレッド（<https://discourse.joplinapp.org/t/side-by-side-difference-view-for-note-history/26461>）に、紹介の投稿へのリンクを付けて返信した（11-27、公開を確認）。
 - 公式一覧への 1.0.1 の取り込みは、一覧の次の更新待ち（11-27 時点で一覧は 1.0.0。一覧は 11-26 13:52 UTC 以降更新されていない）。npm の最新版は 1.0.1。
+
+---
+
+## Issue #2 / PR #4：parent_id に沿った版の組み立て（外部からのプルリクエスト）
+
+[Issue #2](https://github.com/akiratamcat/joplin-plugin-note-history-diff/issues/2)（bwat47 さん）：Joplin 本体の履歴では見られるノートで「A revision could not be read (patch-not-applied).」と出る。[PR #4](https://github.com/akiratamcat/joplin-plugin-note-history-diff/pull/4) で修正が届いた。
+
+レビュー（2026-11-27）：
+
+- Joplin 本体の `Revision.ts`（`mergeDiffs`、`applyTextPatch`）を読み、報告者の説明が正しいことを確かめた。本体は `parent_id` をさかのぼって集めた版に、古いほうから差分を当てる。差分の一部が当てはまらなくても、`patch_apply` の結果の文字を使って続ける。親が見つからなければ、そこでつながりを打ち切って空の状態から組み立てる。
+- PR の変更はこれと同じ組み立て方。本体と違うのは、日時の上で後ろにある親もたどる点と、親のつながりが輪になったときに「invalid-chain」として扱う点（どちらも問題なし）。
+- 外部との通信、ノートや履歴の書き換えはない。警告の記録は版の ID と件数だけで、ノートの文字は含まない。
+- テスト：手元で 108 件すべて合格（README と翻訳の確認も合格）。
+
+### PR #4 で確かめること
+
+PR の内容で作ったプラグインのファイル：`evidence/pr4/io.github.akiratamcat.note-history-diff.jpl`（git の対象外。版数は 1.0.1 のまま）
+
+枝分かれした履歴（同期の行き違いなどでできる）を持つノートは、手元にないかもしれない。その場合は、これまでのノートで動きが変わっていないことを中心に確かめる。
+
+| 項目 | 期待 |
+| --- | --- |
+| 版が数件あるノートで履歴を開く | これまで（1.0.1）と同じ差分が出る |
+| 版が多いノート（20 件以上）で、版の一覧の文字数と、いくつかの版の組み合わせ | これまでと同じ。「読み込めません」の版が増えていない |
+| 「◀ 前の版ペア」「次の版ペア ▶」を何度か押す | これまでどおり |
+| 「更新」を押す | これまでどおり（キャッシュの作り直しが入った） |
+| 「ヘルプ」→「開発ツールの切り替え」のコンソール | ふつうのノートでは「Note History Diff: patch-not-applied」などの警告が出ない |
+| （もしあれば）以前「patch-not-applied」が出たノート | 差分が出る |
