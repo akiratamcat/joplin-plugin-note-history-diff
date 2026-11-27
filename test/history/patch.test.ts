@@ -4,21 +4,21 @@ describe('patch', () => {
 	test('applies a JSON patch in the format Joplin stores', () => {
 		// Same shape as a real title_diff seen on Joplin 3.7.24.
 		const patch = '[{"diffs":[[1,"週次ミーティングのメモ"]],"start1":0,"start2":0,"length1":0,"length2":11}]';
-		expect(applyTextPatch('', patch)).toEqual({ text: '週次ミーティングのメモ', ok: true });
+		expect(applyTextPatch('', patch)).toEqual({ text: '週次ミーティングのメモ', failedHunks: 0, totalHunks: 1 });
 	});
 
 	test('applies a JSON patch with context (equal, delete, insert)', () => {
 		const patch = '[{"diffs":[[0,"ミーティング"],[-1,"のメモ"],[1,"：議事録"]],"start1":2,"start2":2,"length1":9,"length2":10}]';
-		expect(applyTextPatch('週次ミーティングのメモ', patch)).toEqual({ text: '週次ミーティング：議事録', ok: true });
+		expect(applyTextPatch('週次ミーティングのメモ', patch)).toEqual({ text: '週次ミーティング：議事録', failedHunks: 0, totalHunks: 1 });
 	});
 
 	test('treats "[]" and an empty string as no change', () => {
-		expect(applyTextPatch('abc', '[]')).toEqual({ text: 'abc', ok: true });
-		expect(applyTextPatch('abc', '')).toEqual({ text: 'abc', ok: true });
+		expect(applyTextPatch('abc', '[]')).toEqual({ text: 'abc', failedHunks: 0, totalHunks: 0 });
+		expect(applyTextPatch('abc', '')).toEqual({ text: 'abc', failedHunks: 0, totalHunks: 0 });
 	});
 
 	test('accepts the legacy @@ text format', () => {
-		expect(applyTextPatch('', '@@ -0,0 +1,3 @@\n+abc\n')).toEqual({ text: 'abc', ok: true });
+		expect(applyTextPatch('', '@@ -0,0 +1,3 @@\n+abc\n')).toEqual({ text: 'abc', failedHunks: 0, totalHunks: 1 });
 	});
 
 	test('round-trips with makeTextPatch', () => {
@@ -27,10 +27,10 @@ describe('patch', () => {
 		expect(applyTextPatch(before, makeTextPatch(before, after)).text).toBe(after);
 	});
 
-	test('reports ok=false when a patch does not fit the text', () => {
+	test('reports failed hunks when a patch does not fit the text', () => {
 		const patch = makeTextPatch('The quick brown fox jumps over the lazy dog.', 'The quick brown cat jumps over the lazy dog.');
 		const result = applyTextPatch('Completely unrelated text that shares nothing.', patch);
-		expect(result.ok).toBe(false);
+		expect(result).toEqual({ text: 'Completely unrelated text that shares nothing.', failedHunks: 1, totalHunks: 1 });
 	});
 
 	test('rejects malformed patches', () => {

@@ -38,15 +38,15 @@ export function parseTextPatch(patchText: string): Patches {
 
 export interface PatchResult {
 	text: string;
-	// False when at least one hunk could not be applied cleanly.
-	ok: boolean;
+	failedHunks: number;
+	totalHunks: number;
 }
 
 export function applyTextPatch(text: string, patchText: string): PatchResult {
 	const patches = parseTextPatch(patchText);
-	if (!patches.length) return { text, ok: true };
+	if (!patches.length) return { text, failedHunks: 0, totalHunks: 0 };
 	const [patched, flags] = dmp.patch_apply(patches, text);
-	return { text: patched, ok: flags.every(Boolean) };
+	return { text: patched, failedHunks: flags.filter(flag => !flag).length, totalHunks: flags.length };
 }
 
 // Builds a patch in the same format Joplin stores. Used by tests and the dev benchmark.
