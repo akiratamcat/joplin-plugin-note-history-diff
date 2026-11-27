@@ -17,7 +17,7 @@ export type DefaultComparison =
 	| { kind: 'no-history' }
 	// One revision only, identical to the current note: nothing to compare yet.
 	| { kind: 'nothing-to-compare'; revisionTime: number }
-	// A revision could not be rebuilt (encrypted, broken patch).
+	// A revision could not be rebuilt (encrypted, broken patch, invalid chain).
 	| { kind: 'rebuild-failed'; error: RebuildError }
 	| { kind: 'compare'; from: ComparisonSide; to: ComparisonSide };
 
