@@ -133,4 +133,64 @@ describe('RevisionRebuilder', () => {
 			bodyTotalHunks: 1,
 		});
 	});
+
+	test('reports a cycle in the parent chain as invalid-chain', () => {
+		const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+		const [first, second] = makeRevisions([
+			{ title: 'First', body: 'Body 1' },
+			{ title: 'Second', body: 'Body 2' },
+		]);
+
+		const selfCycle = { ...first, parent_id: first.id };
+		const selfRebuilder = new RevisionRebuilder([selfCycle], new RevisionCache(1_000_000));
+		expect(() => selfRebuilder.versionAt(0)).toThrow(expect.objectContaining({ reason: 'invalid-chain', index: 0 }));
+		expect(selfRebuilder.scan()).toEqual([{ index: 0, ok: false, reason: 'invalid-chain' }]);
+		expect(warn).toHaveBeenCalledWith('Note History Diff: invalid-chain', {
+			revisionId: selfCycle.id,
+			parentId: selfCycle.id,
+			revisionNumber: 1,
+			revisionCount: 1,
+		});
+
+		const cycleA = { ...first, parent_id: second.id };
+		const cycleB = { ...second, parent_id: first.id };
+		const pairRebuilder = new RevisionRebuilder([cycleA, cycleB], new RevisionCache(1_000_000));
+		expect(() => pairRebuilder.versionAt(0)).toThrow(expect.objectContaining({ reason: 'invalid-chain' }));
+		expect(pairRebuilder.scan()).toEqual([
+			{ index: 0, ok: false, reason: 'invalid-chain' },
+			{ index: 1, ok: false, reason: 'invalid-chain' },
+		]);
+	});
+
+	test('warns and falls back to empty text when parent_id is missing from the list', () => {
+		const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+		const standalone = { title: 'Orphan', body: 'Standalone body' };
+		const [root] = makeRevisions([standalone]);
+		const orphan = { ...root, parent_id: 'missing-parent-id' };
+		const rebuilder = new RevisionRebuilder([orphan], new RevisionCache(1_000_000));
+		expect(rebuilder.versionAt(0)).toEqual(standalone);
+		expect(rebuilder.scan()).toEqual([{ index: 0, ok: true, bodyLength: standalone.body.length }]);
+		expect(warn).toHaveBeenCalledTimes(1);
+		expect(warn).toHaveBeenCalledWith('Note History Diff: missing-parent', {
+			revisionId: orphan.id,
+			parentId: 'missing-parent-id',
+			revisionNumber: 1,
+			revisionCount: 1,
+		});
+	});
+
+	test('rebuilds when a recorded parent appears later in display order', () => {
+		const parentVersion = { title: 'Parent', body: 'Base body' };
+		const childVersion = { title: 'Child', body: 'Base body with child edit' };
+		const [parent, child] = makeRevisions([parentVersion, childVersion]);
+		const rebuilder = new RevisionRebuilder([child, parent], new RevisionCache(1_000_000));
+		expect(rebuilder.versionAt(0)).toEqual(childVersion);
+		expect(rebuilder.versionAt(1)).toEqual(parentVersion);
+
+		const scanned = new RevisionRebuilder([child, parent], new RevisionCache(1_000_000));
+		expect(scanned.scan()).toEqual([
+			{ index: 0, ok: true, bodyLength: childVersion.body.length },
+			{ index: 1, ok: true, bodyLength: parentVersion.body.length },
+		]);
+	});
 });
