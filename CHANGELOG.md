@@ -11,6 +11,12 @@ Changes that users notice are always listed. The Japanese version
 
 ## [Unreleased]
 
+### Fixed
+
+- Some notes could not be compared and showed "A revision could not be read (patch-not-applied)." even though Joplin's own history viewer could open them. Revisions are now rebuilt the way Joplin rebuilds them: each change is applied to the revision it was recorded against, not to the one just before it by date. When part of a stored change no longer fits its text, the rest of the change is still used, as in Joplin. The comparison then opens, but it can miss that part of the change. A warning with the revision ID, and no note text, is written to the plugin console.
+- If the recorded links between revisions form a loop, the comparison shows "A revision could not be read (invalid-chain)."
+- A revision that cannot be read no longer hides the length of later revisions that do not depend on it in the version list.
+
 ## [1.0.1] - 2026-11-26
 
 ### Fixed
