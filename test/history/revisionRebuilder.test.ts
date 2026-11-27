@@ -7,6 +7,10 @@ describe('RevisionRebuilder', () => {
 	const versions = growingVersions(35);
 	const revisions = makeRevisions(versions);
 
+	afterEach(() => {
+		jest.restoreAllMocks();
+	});
+
 	test('rebuilds every version in order', () => {
 		const rebuilder = new RevisionRebuilder(revisions, new RevisionCache(1_000_000), 10);
 		versions.forEach((expected, i) => expect(rebuilder.versionAt(i)).toEqual(expected));
@@ -44,6 +48,7 @@ describe('RevisionRebuilder', () => {
 	});
 
 	test('reports an encrypted revision', () => {
+		jest.spyOn(console, 'warn').mockImplementation(() => {});
 		const encrypted = revisions.map((r, i) => (i === 5 ? { ...r, encryption_applied: 1 } : r));
 		const rebuilder = new RevisionRebuilder(encrypted, new RevisionCache(1_000_000), 10);
 		expect(rebuilder.versionAt(4)).toEqual(versions[4]);
@@ -56,6 +61,7 @@ describe('RevisionRebuilder', () => {
 	});
 
 	test('reports an invalid patch', () => {
+		jest.spyOn(console, 'warn').mockImplementation(() => {});
 		const broken = revisions.map((r, i) => (i === 3 ? { ...r, title_diff: 'not a patch' } : r));
 		const rebuilder = new RevisionRebuilder(broken, new RevisionCache(1_000_000), 10);
 		expect(() => rebuilder.versionAt(3)).toThrow(expect.objectContaining({ reason: 'invalid-patch', index: 3 }));
@@ -79,6 +85,7 @@ describe('RevisionRebuilder', () => {
 	});
 
 	test('scan marks a revision that cannot be rebuilt and its descendants', () => {
+		jest.spyOn(console, 'warn').mockImplementation(() => {});
 		const broken = revisions.map((r, i) => (i === 5 ? { ...r, encryption_applied: 1 } : r));
 		const summaries = new RevisionRebuilder(broken, new RevisionCache(1_000_000), 10).scan();
 		expect(summaries[4]).toEqual({ index: 4, ok: true, bodyLength: versions[4].body.length });
@@ -86,6 +93,7 @@ describe('RevisionRebuilder', () => {
 	});
 
 	test('rebuilds a branch from its recorded parent with another branch in the cache', () => {
+		jest.spyOn(console, 'warn').mockImplementation(() => {});
 		const root = { title: 'Original title', body: 'Original body' };
 		const branch = { title: 'Unrelated heading', body: 'Other content' };
 		const latest = { title: 'Original title edited', body: 'Original body and more' };
@@ -106,27 +114,23 @@ describe('RevisionRebuilder', () => {
 
 	test('continues from the text returned by a failed hunk and logs counts', () => {
 		const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
-		try {
-			const root = { title: 'First', body: 'Completely unrelated text that shares nothing.' };
-			const latest = { title: 'Third', body: root.body + ' Then an edit.' };
-			const [first, second, third] = makeRevisions([root, { ...root, title: 'Second' }, latest]);
-			second.body_diff = makeTextPatch('The quick brown fox jumps over the lazy dog.', 'The quick brown cat jumps over the lazy dog.');
-			const rebuilder = new RevisionRebuilder([first, second, third], new RevisionCache(1_000_000));
-			expect(rebuilder.versionAt(2)).toEqual(latest);
-			expect(rebuilder.scan()[1]).toEqual({ index: 1, ok: true, bodyLength: root.body.length });
-			expect(warn).toHaveBeenCalledTimes(1);
-			expect(warn).toHaveBeenCalledWith('Note History Diff: patch-not-applied', {
-				revisionId: second.id,
-				parentId: first.id,
-				revisionNumber: 2,
-				revisionCount: 3,
-				titleFailedHunks: 0,
-				titleTotalHunks: 1,
-				bodyFailedHunks: 1,
-				bodyTotalHunks: 1,
-			});
-		} finally {
-			warn.mockRestore();
-		}
+		const root = { title: 'First', body: 'Completely unrelated text that shares nothing.' };
+		const latest = { title: 'Third', body: root.body + ' Then an edit.' };
+		const [first, second, third] = makeRevisions([root, { ...root, title: 'Second' }, latest]);
+		second.body_diff = makeTextPatch('The quick brown fox jumps over the lazy dog.', 'The quick brown cat jumps over the lazy dog.');
+		const rebuilder = new RevisionRebuilder([first, second, third], new RevisionCache(1_000_000));
+		expect(rebuilder.versionAt(2)).toEqual(latest);
+		expect(rebuilder.scan()[1]).toEqual({ index: 1, ok: true, bodyLength: root.body.length });
+		expect(warn).toHaveBeenCalledTimes(1);
+		expect(warn).toHaveBeenCalledWith('Note History Diff: patch-not-applied', {
+			revisionId: second.id,
+			parentId: first.id,
+			revisionNumber: 2,
+			revisionCount: 3,
+			titleFailedHunks: 0,
+			titleTotalHunks: 1,
+			bodyFailedHunks: 1,
+			bodyTotalHunks: 1,
+		});
 	});
 });
