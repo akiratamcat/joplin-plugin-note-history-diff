@@ -1,6 +1,6 @@
 {
   "name": "joplin-plugin-note-history-diff",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "Compare two revisions of a Joplin note and see what changed. / Joplin のノートの 2 つの版を比べて、変わったところを表示します。",
   "repository": {
     "type": "git",

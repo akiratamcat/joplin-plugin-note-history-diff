@@ -30,12 +30,31 @@ export interface RenderOptions {
 	mode?: DisplayMode;
 	// F9: whether trailing whitespace and line endings are ignored.
 	ignoreWhitespace?: boolean;
+	// F14: the diff's font (CSS font-family list, null: the system monospace
+	// font) and size in pixels (null: the size of the rest of the view).
+	diffFontFamily?: string | null;
+	diffFontSize?: number | null;
+	// F14: unchanged lines kept around each change (null: do not fold),
+	// character highlight, and wrapping of long lines.
+	context?: number | null;
+	inline?: boolean;
+	wrap?: boolean;
 }
 
 interface ResolvedOptions {
 	format: DateTimeFormat;
 	mode: DisplayMode;
 	ignoreWhitespace: boolean;
+	context: number | null;
+	inline: boolean;
+}
+
+// CSS custom properties for the diff's font, set on the view's root element.
+function diffStyle(options: RenderOptions): string {
+	const properties: string[] = [];
+	if (options.diffFontFamily) properties.push(`--nhd-diff-font: ${options.diffFontFamily}`);
+	if (options.diffFontSize) properties.push(`--nhd-diff-size: ${Math.round(options.diffFontSize)}px`);
+	return properties.length ? ` style="${escapeHtml(properties.join('; '))}"` : '';
 }
 
 function choiceLabel(choice: VersionChoice, strings: Strings, format: DateTimeFormat): string {
@@ -92,10 +111,10 @@ function renderTitle(diff: VersionDiff, strings: Strings): string {
 	</div>`;
 }
 
-function renderBody(diff: VersionDiff, strings: Strings): string {
+function renderBody(diff: VersionDiff, strings: Strings, options: ResolvedOptions): string {
 	const { body } = diff;
 	if (!body.added && !body.removed) return message(strings.bodyUnchanged);
-	return `<div class="diff">${renderDiffViews(body.lines, { foldedLines: strings.foldedLines })}</div>`;
+	return `<div class="diff">${renderDiffViews(body.lines, { foldedLines: strings.foldedLines }, { context: options.context, inline: options.inline })}</div>`;
 }
 
 // The fixed part at the top (versions, buttons) and the part that scrolls (the diff).
@@ -131,7 +150,7 @@ function renderResult(state: Extract<PanelState, { kind: 'result' }>, strings: S
 	<div class="meta-row"><p class="meta">${explanation ? `${escapeHtml(explanation)} · ` : ''}${stats}</p>${jumps}</div>
 	<div class="controls">${whitespace}${modes}</div>`,
 		body: `${renderTitle(diff, strings)}
-	${renderBody(diff, strings)}`,
+	${renderBody(diff, strings, options)}`,
 	};
 }
 
@@ -166,8 +185,14 @@ export function renderPanel(state: PanelState, strings: Strings, options: Render
 		format: options.format || LOCALE_FORMAT,
 		mode: options.mode || 'side',
 		ignoreWhitespace: options.ignoreWhitespace !== false,
+		context: options.context === undefined ? 3 : options.context,
+		inline: options.inline !== false,
 	};
 	const parts = renderContent(state, strings, resolved);
+	const classes = `nhd mode-${resolved.mode}${options.wrap === false ? ' nowrap' : ''}`;
+	// Issue #3: Joplin's editor view shows no right-click menu, so the view
+	// draws its own (panel.js shows it on right-click).
+	const contextMenu = `<div class="ctxmenu" hidden><button data-ctx="copy">${escapeHtml(strings.copy)}</button></div>`;
 	// Only the body scrolls, so the buttons stay in view (v0.7.0 test).
-	return `<div class="nhd mode-${resolved.mode}"><div class="head">${toolbar(strings)}${parts.head}</div><div class="body">${parts.body}</div></div>`;
+	return `<div class="${classes}"${diffStyle(options)}><div class="head">${toolbar(strings)}${parts.head}</div><div class="body">${parts.body}</div>${contextMenu}</div>`;
 }

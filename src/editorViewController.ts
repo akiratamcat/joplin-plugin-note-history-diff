@@ -7,6 +7,7 @@ import { RevisionRepository } from './history/revisionRepository';
 import { stringsFor } from './ui/i18n';
 import { DateTimeFormat } from './ui/dateFormat';
 import { ComparisonExplanation, DisplayMode, PanelState, renderPanel } from './ui/panelView';
+import { CONTEXT_LINE_CHOICES, contextLines, DEFAULT_CONTEXT_LINES, DIFF_FONT_SIZE_MAX, DIFF_FONT_SIZE_MIN, diffFontFamily, diffFontSize, initialMode, InitialMode, modeToOpenWith, NO_FOLDING } from './core/viewSettings';
 
 // Shows the note history diff in the editor area (where the note editor is),
 // like Joplin's own "Note history" view, using the editor plugin API.
@@ -33,6 +34,14 @@ const SHOWN_EDITOR_VIEWS_SETTING = 'plugins.shownEditorViewIds';
 const DISPLAY_MODE_SETTING = 'displayMode';
 // F9: whether trailing whitespace and line endings are ignored. Internal too.
 const IGNORE_WHITESPACE_SETTING = 'ignoreWhitespace';
+// F14: the settings screen.
+const SETTINGS_SECTION = 'noteHistoryDiff';
+const DIFF_FONT_SIZE_SETTING = 'diffFontSize';
+const CONTEXT_LINES_SETTING = 'contextLines';
+const CHAR_HIGHLIGHT_SETTING = 'charHighlight';
+const INITIAL_MODE_SETTING = 'initialMode';
+const WRAP_LINES_SETTING = 'wrapLines';
+const VIEW_SETTINGS = [DIFF_FONT_SIZE_SETTING, CONTEXT_LINES_SETTING, CHAR_HIGHLIGHT_SETTING, INITIAL_MODE_SETTING, WRAP_LINES_SETTING, IGNORE_WHITESPACE_SETTING];
 const STARTUP_REOPEN_WINDOW_MS = 5000;
 
 async function globalSetting(key: string): Promise<any> {
@@ -95,6 +104,12 @@ interface Session {
 
 export async function registerHistoryEditorView(): Promise<void> {
 	const strings = stringsFor(await globalSetting('locale'));
+	// F14: the settings screen (Options > Note History Diff). The display mode
+	// stays internal: it is the layout chosen last with the view's buttons.
+	await joplin.settings.registerSection(SETTINGS_SECTION, { label: strings.panelTitle, iconName: 'fas fa-history' });
+	const contextOptions: Record<number, string> = {};
+	for (const lines of CONTEXT_LINE_CHOICES) contextOptions[lines] = String(lines);
+	contextOptions[NO_FOLDING] = strings.doNotFold;
 	await joplin.settings.registerSettings({
 		[DISPLAY_MODE_SETTING]: {
 			value: 'side',
@@ -102,11 +117,55 @@ export async function registerHistoryEditorView(): Promise<void> {
 			public: false,
 			label: 'Display mode (side or unified)',
 		},
+		[DIFF_FONT_SIZE_SETTING]: {
+			value: 0,
+			type: SettingItemType.Int,
+			public: true,
+			section: SETTINGS_SECTION,
+			label: strings.settingDiffFontSize,
+			description: strings.settingDiffFontSizeDescription(DIFF_FONT_SIZE_MIN, DIFF_FONT_SIZE_MAX),
+			minimum: 0,
+			maximum: DIFF_FONT_SIZE_MAX,
+			step: 1,
+		},
+		[CONTEXT_LINES_SETTING]: {
+			value: DEFAULT_CONTEXT_LINES,
+			type: SettingItemType.Int,
+			public: true,
+			section: SETTINGS_SECTION,
+			isEnum: true,
+			options: contextOptions,
+			label: strings.settingContextLines,
+		},
+		[CHAR_HIGHLIGHT_SETTING]: {
+			value: true,
+			type: SettingItemType.Bool,
+			public: true,
+			section: SETTINGS_SECTION,
+			label: strings.settingCharHighlight,
+		},
+		[INITIAL_MODE_SETTING]: {
+			value: 'last',
+			type: SettingItemType.String,
+			public: true,
+			section: SETTINGS_SECTION,
+			isEnum: true,
+			options: { last: strings.lastUsedMode, side: strings.modeSideBySide, unified: strings.modeUnified },
+			label: strings.settingInitialMode,
+		},
+		[WRAP_LINES_SETTING]: {
+			value: true,
+			type: SettingItemType.Bool,
+			public: true,
+			section: SETTINGS_SECTION,
+			label: strings.settingWrapLines,
+		},
 		[IGNORE_WHITESPACE_SETTING]: {
 			value: true,
 			type: SettingItemType.Bool,
-			public: false,
-			label: 'Ignore trailing whitespace and line endings',
+			public: true,
+			section: SETTINGS_SECTION,
+			label: strings.ignoreWhitespace,
 		},
 	});
 	let ignoreWhitespace = true;
@@ -115,12 +174,38 @@ export async function registerHistoryEditorView(): Promise<void> {
 	} catch (error) {
 		console.warn('Note History Diff: could not read the whitespace setting', error);
 	}
-	let displayMode: DisplayMode = 'side';
+	// The layout chosen last with the view's buttons (remembered), and the
+	// layout shown now (F14: the history diff may open with a fixed layout).
+	let lastUsedMode: DisplayMode = 'side';
 	try {
-		displayMode = (await joplin.settings.value(DISPLAY_MODE_SETTING)) === 'unified' ? 'unified' : 'side';
+		lastUsedMode = (await joplin.settings.value(DISPLAY_MODE_SETTING)) === 'unified' ? 'unified' : 'side';
 	} catch (error) {
 		console.warn('Note History Diff: could not read the display mode', error);
 	}
+	let displayMode: DisplayMode = lastUsedMode;
+
+	// F14: the plugin's settings, read at startup and whenever they change.
+	const pluginSetting = async (key: string): Promise<any> => {
+		try {
+			return await joplin.settings.value(key);
+		} catch (error) {
+			return null;
+		}
+	};
+	let diffFontSizeSetting: unknown = 0;
+	let contextSetting: number | null = DEFAULT_CONTEXT_LINES;
+	let charHighlight = true;
+	let openWith: InitialMode = 'last';
+	let wrapLines = true;
+	const readPluginSettings = async () => {
+		diffFontSizeSetting = await pluginSetting(DIFF_FONT_SIZE_SETTING);
+		contextSetting = contextLines(await pluginSetting(CONTEXT_LINES_SETTING));
+		charHighlight = (await pluginSetting(CHAR_HIGHLIGHT_SETTING)) !== false;
+		openWith = initialMode(await pluginSetting(INITIAL_MODE_SETTING));
+		wrapLines = (await pluginSetting(WRAP_LINES_SETTING)) !== false;
+		ignoreWhitespace = (await pluginSetting(IGNORE_WHITESPACE_SETTING)) !== false;
+	};
+	await readPluginSettings();
 	// Was the view left open when Joplin was last closed? null: unknown.
 	const shownAtStart = await globalSetting(SHOWN_EDITOR_VIEWS_SETTING);
 	const reopenExpected = viewRememberedAsShown(shownAtStart);
@@ -151,15 +236,34 @@ export async function registerHistoryEditorView(): Promise<void> {
 
 	// Joplin's date and time formats (Options > General), read again on every
 	// load so that a change applies the next time the history is shown.
+	// Likewise the editor's font size and monospace font family (Options >
+	// Editor), used for the diff (F14).
 	let dateTimeFormat: DateTimeFormat = { date: null, time: null };
+	let editorFontSize: unknown = null;
+	let editorMonospaceFont: unknown = null;
 	const readDateTimeFormat = async () => {
 		const date = await globalSetting('dateFormat');
 		const time = await globalSetting('timeFormat');
 		dateTimeFormat = { date: typeof date === 'string' ? date : null, time: typeof time === 'string' ? time : null };
+		editorFontSize = await globalSetting('style.editor.fontSize');
+		editorMonospaceFont = await globalSetting('style.editor.monospaceFontFamily');
 	};
 
+	// The state on screen, drawn again when a setting changes.
+	let shownState: PanelState | null = null;
 	const render = async (state: PanelState) => {
-		if (viewHandle) await joplin.views.editors.setHtml(viewHandle, renderPanel(state, strings, { format: dateTimeFormat, mode: displayMode, ignoreWhitespace }));
+		shownState = state;
+		if (!viewHandle) return;
+		await joplin.views.editors.setHtml(viewHandle, renderPanel(state, strings, {
+			format: dateTimeFormat,
+			mode: displayMode,
+			ignoreWhitespace,
+			diffFontFamily: diffFontFamily(editorMonospaceFont),
+			diffFontSize: diffFontSize(diffFontSizeSetting, editorFontSize),
+			context: contextSetting,
+			inline: charHighlight,
+			wrap: wrapLines,
+		}));
 	};
 
 	let session: Session | null = null;
@@ -302,8 +406,14 @@ export async function registerHistoryEditorView(): Promise<void> {
 		}
 	};
 
-	const showHistory = async (noteId: string) => {
+	// Opening the history diff of a note: F14 may fix the layout it opens with.
+	const startHistory = (noteId: string) => {
 		historyNoteId = noteId;
+		displayMode = modeToOpenWith(openWith, lastUsedMode);
+	};
+
+	const showHistory = async (noteId: string) => {
+		startHistory(noteId);
 		await refresh(noteId);
 	};
 
@@ -381,6 +491,9 @@ export async function registerHistoryEditorView(): Promise<void> {
 				if (message.type === 'select' && typeof message.from === 'string' && typeof message.to === 'string') await select(message.from, message.to);
 				if (message.type === 'pair-older') await stepPair('older');
 				if (message.type === 'pair-newer') await stepPair('newer');
+				// Issue #3: "Copy" in the view's right-click menu, when the webview
+				// could not copy by itself.
+				if (message.type === 'copyText' && typeof message.text === 'string') await joplin.clipboard.writeText(message.text);
 				if (message.type === 'whitespace' && typeof message.ignore === 'boolean') {
 					ignoreWhitespace = message.ignore;
 					await joplin.settings.setValue(IGNORE_WHITESPACE_SETTING, ignoreWhitespace);
@@ -389,6 +502,7 @@ export async function registerHistoryEditorView(): Promise<void> {
 				if (message.type === 'mode' && (message.mode === 'side' || message.mode === 'unified')) {
 					// The view already switched; remember the choice for next time.
 					displayMode = message.mode;
+					lastUsedMode = displayMode;
 					await joplin.settings.setValue(DISPLAY_MODE_SETTING, displayMode);
 				}
 				return null;
@@ -428,7 +542,7 @@ export async function registerHistoryEditorView(): Promise<void> {
 				await joplin.views.dialogs.showMessageBox(strings.mainWindowOnly);
 				return;
 			}
-			historyNoteId = selected.id;
+			startHistory(selected.id);
 			if (!(await isVisible())) {
 				await joplin.commands.execute('showEditorPlugin');
 				await wait(300);
@@ -447,4 +561,12 @@ export async function registerHistoryEditorView(): Promise<void> {
 
 	await joplin.views.menuItems.create('noteHistoryDiff.showDiffMenu', SHOW_DIFF_COMMAND, MenuItemLocation.Tools);
 	await joplin.views.toolbarButtons.create('noteHistoryDiff.showDiffButton', SHOW_DIFF_COMMAND, ToolbarButtonLocation.NoteToolbar);
+
+	// F14: a changed setting applies to the history diff on screen at once.
+	await joplin.settings.onChange(async event => {
+		if (!event.keys.some(key => VIEW_SETTINGS.includes(key))) return;
+		await readPluginSettings();
+		if (session && session.noteId === historyNoteId) await recompute();
+		else if (shownState) await render(shownState);
+	});
 }

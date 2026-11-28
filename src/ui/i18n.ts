@@ -48,6 +48,17 @@ export interface Strings {
 	title: string;
 	bodyUnchanged: string;
 	foldedLines: (count: number) => string;
+	// Issue #3: the view's own right-click menu.
+	copy: string;
+	// F14: the settings screen (Options > Note History Diff).
+	settingDiffFontSize: string;
+	settingDiffFontSizeDescription: (min: number, max: number) => string;
+	settingContextLines: string;
+	doNotFold: string;
+	settingCharHighlight: string;
+	settingInitialMode: string;
+	lastUsedMode: string;
+	settingWrapLines: string;
 }
 
 export function stringsFor(joplinLocale: string | null | undefined): Strings {
@@ -106,5 +117,18 @@ export function stringsFor(joplinLocale: string | null | undefined): Strings {
 		bodyUnchanged: t._('Body: no changes'),
 		// TRANSLATORS: Shown in place of unchanged lines that are folded away.
 		foldedLines: count => t.ngettext('… {count} unchanged line …', '… {count} unchanged lines …', count, { count: number(count) }),
+		// TRANSLATORS: Item of the right-click menu in the history diff.
+		copy: t._('Copy'),
+		settingDiffFontSize: t._('Font size of the diff'),
+		// TRANSLATORS: Description of the setting above. {min} and {max} are numbers; "Editor" is the section of Joplin's options.
+		settingDiffFontSizeDescription: (min, max) => t._('In pixels, from {min} to {max}. 0 uses the editor font size set in the Editor section of the options.', { min, max }),
+		settingContextLines: t._('Unchanged lines kept around each change'),
+		// TRANSLATORS: Choice of the setting above: show every unchanged line.
+		doNotFold: t._('Do not fold'),
+		settingCharHighlight: t._('Highlight the changed characters inside changed lines'),
+		settingInitialMode: t._('Layout when the history diff opens'),
+		// TRANSLATORS: Choice of the setting above: the layout chosen last time.
+		lastUsedMode: t._('Last used'),
+		settingWrapLines: t._('Wrap long lines'),
 	};
 }

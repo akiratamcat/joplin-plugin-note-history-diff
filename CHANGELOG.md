@@ -11,6 +11,16 @@ Changes that users notice are always listed. The Japanese version
 
 ## [Unreleased]
 
+### Added
+
+- Settings in Tools > Options > Note History Diff: font size of the diff (follows the editor font size by default), unchanged lines kept around each change (or no folding), character highlight, layout when the history diff opens (last used, side by side or unified), wrapping of long lines, and ignoring trailing spaces and line endings. A changed setting applies to the history diff on screen at once.
+- A right-click menu with "Copy" in the history diff, since Joplin's editor view shows none ([#3](https://github.com/akiratamcat/joplin-plugin-note-history-diff/issues/3)).
+
+### Changed
+
+- The diff uses the editor monospace font (Options > Editor).
+- The rest of the history diff (buttons, version lists) uses the same text size as Joplin's own interface; it was slightly smaller.
+
 ## [1.0.2] - 2026-11-28
 
 ### Fixed

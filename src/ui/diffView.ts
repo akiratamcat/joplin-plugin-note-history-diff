@@ -34,7 +34,9 @@ function isFold(item: any): item is Fold {
 }
 
 // Collapses long runs of unchanged items, keeping a few items of context.
-export function foldRuns<T>(items: T[], isEqual: (item: T) => boolean, context = CONTEXT_LINES): (T | Fold)[] {
+// `context` null: nothing is folded (F14 "do not fold").
+export function foldRuns<T>(items: T[], isEqual: (item: T) => boolean, context: number | null = CONTEXT_LINES): (T | Fold)[] {
+	if (context === null) return items.slice();
 	const output: (T | Fold)[] = [];
 	let index = 0;
 	while (index < items.length) {
@@ -134,8 +136,8 @@ function unifiedLine(kind: 'equal' | 'delete' | 'insert', cell: SideCell, hunk =
 }
 
 // One column: in each block of changes, the deleted lines, then the inserted ones.
-export function renderUnified(rows: SideRow[], labels: DiffViewLabels): string {
-	const items = foldRuns(rows, r => r.kind === 'equal');
+export function renderUnified(rows: SideRow[], labels: DiffViewLabels, context: number | null = CONTEXT_LINES): string {
+	const items = foldRuns(rows, r => r.kind === 'equal', context);
 	const html: string[] = [];
 	let index = 0;
 	while (index < items.length) {
@@ -171,9 +173,9 @@ function sideCell(cell: SideCell | null, changeClass: string, side: 'left' | 'ri
 	return `<div class="no ${side}">${cell.no}</div><div class="cell ${side}${changeClass ? ` ${changeClass}` : ''}">${segmentsHtml(cell.text, cell.segments)}</div>`;
 }
 
-export function renderSideBySide(rows: SideRow[], labels: DiffViewLabels): string {
+export function renderSideBySide(rows: SideRow[], labels: DiffViewLabels, context: number | null = CONTEXT_LINES): string {
 	let inBlock = false;
-	const html = foldRuns(rows, r => r.kind === 'equal').map(row => {
+	const html = foldRuns(rows, r => r.kind === 'equal', context).map(row => {
 		if (isFold(row)) {
 			inBlock = false;
 			return `<div class="sbs-fold">${foldHtml(row.count, labels)}</div>`;
@@ -187,7 +189,15 @@ export function renderSideBySide(rows: SideRow[], labels: DiffViewLabels): strin
 }
 
 // Both layouts; the CSS and the display mode pick one.
-export function renderDiffViews(lines: DiffLine[], labels: DiffViewLabels): string {
-	const rows = toSideRows(lines);
-	return `<div class="view-sbs">${renderSideBySide(rows, labels)}</div><div class="view-unified">${renderUnified(rows, labels)}</div>`;
+// F14: unchanged lines kept around each change (null: do not fold), and
+// whether changed characters are highlighted inside changed lines.
+export interface DiffViewOptions {
+	context?: number | null;
+	inline?: boolean;
+}
+
+export function renderDiffViews(lines: DiffLine[], labels: DiffViewLabels, options: DiffViewOptions = {}): string {
+	const context = options.context === undefined ? CONTEXT_LINES : options.context;
+	const rows = toSideRows(lines, options.inline === false ? 0 : INLINE_MAX_PAIRS);
+	return `<div class="view-sbs">${renderSideBySide(rows, labels, context)}</div><div class="view-unified">${renderUnified(rows, labels, context)}</div>`;
 }

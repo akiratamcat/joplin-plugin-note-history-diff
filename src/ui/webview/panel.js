@@ -67,6 +67,7 @@
 			if (root) {
 				root.classList.remove('mode-side', 'mode-unified');
 				root.classList.add('mode-' + mode);
+				scheduleAlign();
 			}
 			document.querySelectorAll('[data-mode]').forEach(function(button) {
 				button.classList.toggle('active', button === modeButton);
@@ -117,13 +118,15 @@
 		});
 	});
 
-	document.addEventListener('copy', function(event) {
+	// The selected text of the side-by-side view, from the side the selection
+	// was made on, or null when the selection is not there.
+	function selectedSideText() {
 		const selection = window.getSelection();
-		if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return;
+		if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return null;
 		const sbs = document.querySelector('.view-sbs .sbs');
-		if (!sbs || sbs.offsetParent === null) return;
+		if (!sbs || sbs.offsetParent === null) return null;
 		const side = sbs.classList.contains('select-right') ? 'right' : sbs.classList.contains('select-left') ? 'left' : null;
-		if (!side) return;
+		if (!side) return null;
 		const range = selection.getRangeAt(0);
 		const lines = [];
 		sbs.querySelectorAll('.cell.' + side).forEach(function(cell) {
@@ -139,10 +142,105 @@
 			}
 			lines.push(part.toString());
 		});
-		if (!lines.length || !event.clipboardData) return;
-		event.clipboardData.setData('text/plain', lines.join('\n'));
+		return lines.length ? lines.join('\n') : null;
+	}
+
+	document.addEventListener('copy', function(event) {
+		const text = selectedSideText();
+		if (text === null || !event.clipboardData) return;
+		event.clipboardData.setData('text/plain', text);
 		event.preventDefault();
 	});
+
+	// Issue #3: Joplin's editor view shows no right-click menu, so the view
+	// shows its own with "Copy" (disabled without a selection). Copy goes
+	// through the browser's copy command, and so through the handler above;
+	// if the webview may not copy by itself, the plugin writes the text.
+	function contextMenu() {
+		return document.querySelector('.nhd .ctxmenu');
+	}
+
+	function hideContextMenu() {
+		const menu = contextMenu();
+		if (menu) menu.hidden = true;
+	}
+
+	document.addEventListener('contextmenu', function(event) {
+		const menu = contextMenu();
+		if (!menu || !event.target || !event.target.closest || !event.target.closest('.nhd > .body')) return;
+		event.preventDefault();
+		const selection = window.getSelection();
+		const hasSelection = !!selection && !selection.isCollapsed && selection.toString().length > 0;
+		const copyButton = menu.querySelector('[data-ctx="copy"]');
+		if (copyButton) copyButton.disabled = !hasSelection;
+		menu.hidden = false;
+		const width = menu.offsetWidth;
+		const height = menu.offsetHeight;
+		menu.style.left = Math.max(0, Math.min(event.clientX, window.innerWidth - width - 4)) + 'px';
+		menu.style.top = Math.max(0, Math.min(event.clientY, window.innerHeight - height - 4)) + 'px';
+	});
+
+	document.addEventListener('mousedown', function(event) {
+		// A right-click keeps the selection; a press outside the menu closes it.
+		if (event.target && event.target.closest && event.target.closest('.nhd .ctxmenu')) {
+			event.preventDefault();
+			return;
+		}
+		hideContextMenu();
+	}, true);
+
+	document.addEventListener('keydown', function(event) {
+		if (event.key === 'Escape') hideContextMenu();
+	});
+
+	document.addEventListener('scroll', hideContextMenu, true);
+	window.addEventListener('blur', hideContextMenu);
+
+	document.addEventListener('click', function(event) {
+		const item = event.target && event.target.closest ? event.target.closest('.nhd .ctxmenu [data-ctx="copy"]') : null;
+		if (!item || item.disabled) return;
+		hideContextMenu();
+		let copied = false;
+		try {
+			copied = document.execCommand('copy');
+		} catch (error) {
+			copied = false;
+		}
+		if (!copied) {
+			const selection = window.getSelection();
+			const text = selectedSideText() || (selection ? selection.toString() : '');
+			if (text) webviewApi.postMessage({ type: 'copyText', text: text });
+		}
+	});
+
+	// F14: with long lines not wrapped, both text columns of the side-by-side
+	// view get the width of the widest line on their side, so that the rows
+	// (one grid each) stay aligned while the diff scrolls sideways.
+	function alignColumns() {
+		const root = document.querySelector('.nhd');
+		const sbs = document.querySelector('.view-sbs .sbs');
+		if (!root || !sbs) return;
+		sbs.style.removeProperty('--nhd-col-left');
+		sbs.style.removeProperty('--nhd-col-right');
+		if (!root.classList.contains('nowrap') || sbs.offsetParent === null) return;
+		['left', 'right'].forEach(function(side) {
+			let widest = 0;
+			sbs.querySelectorAll('.cell.' + side).forEach(function(cell) {
+				widest = Math.max(widest, cell.scrollWidth);
+			});
+			if (widest > 0) sbs.style.setProperty('--nhd-col-' + side, Math.ceil(widest) + 'px');
+		});
+	}
+
+	let alignPending = false;
+	function scheduleAlign() {
+		if (alignPending) return;
+		alignPending = true;
+		requestAnimationFrame(function() {
+			alignPending = false;
+			alignColumns();
+		});
+	}
 
 	// Marks a dark Joplin theme on <html>, from the brightness of Joplin's
 	// background colour, so that the stylesheet can use stronger colours.
@@ -162,6 +260,7 @@
 		if (now && !visible) {
 			// The theme may have changed while the view was hidden.
 			updateTheme();
+			scheduleAlign();
 			webviewApi.postMessage({ type: 'shown' });
 		}
 		visible = now;
@@ -172,6 +271,12 @@
 	}
 	function start() {
 		updateTheme();
+		// The plugin replaces the view's content on every update.
+		if (typeof MutationObserver !== 'undefined') {
+			new MutationObserver(scheduleAlign).observe(document.body, { childList: true, subtree: true });
+		}
+		window.addEventListener('resize', scheduleAlign);
+		scheduleAlign();
 		if (typeof ResizeObserver !== 'undefined') new ResizeObserver(checkSize).observe(document.documentElement);
 		if (typeof IntersectionObserver !== 'undefined') {
 			new IntersectionObserver(function(entries) {
