@@ -111,6 +111,10 @@
 
 	document.addEventListener('mousedown', function(event) {
 		if (event.button !== 0) return;
+		// A press in the right-click menu ("Copy") must keep the side of the
+		// selection: otherwise the other side became selectable again, showed
+		// as selected, and was copied too (v1.1.0 test).
+		if (event.target && event.target.closest && event.target.closest('.nhd .ctxmenu')) return;
 		const side = sideOf(event.target);
 		document.querySelectorAll('.sbs').forEach(function(sbs) {
 			sbs.classList.toggle('select-left', side === 'left');
