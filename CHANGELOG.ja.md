@@ -10,6 +10,8 @@
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-28
+
 ### 追加
 
 - 「ツール」→「オプション」→「Note History Diff」の設定：差分の文字の大きさ（初期値はエディターのフォントサイズに合わせる）、変更の前後に残す行数（または折りたたまない）、文字単位の強調、履歴の差分を開いたときの表示方式（前回の方式・横並び・1 列）、長い行の折り返し、行末の空白と改行コードの違いを無視。設定を変えると、表示中の履歴の差分にもすぐ反映される。
@@ -19,6 +21,10 @@
 
 - 差分の書体に、エディターの等幅フォント（オプションの「エディター」）を使うようにした。
 - 差分以外の部分（ボタン、版の一覧など）の文字を、Joplin 本体の画面と同じ大きさにした（少し小さかった）。
+
+### 修正
+
+- 横並びの表示で、文字を選んだまま反対側の列を押すと、前の選択の隣のセルが選ばれた表示になっていた。
 
 ## [1.0.2] - 2026-11-28
 
@@ -52,7 +58,8 @@
 - 明るいテーマと暗いテーマに合わせた色。日時は Joplin の「日付の形式」「時刻の形式」に従う。
 - 11 言語の画面（gettext で翻訳）：英語、日本語、中国語（簡体字・繁体字）、韓国語、ドイツ語、フランス語、スペイン語、イタリア語、ポルトガル語（ブラジル）、ロシア語。
 
-[Unreleased]: https://github.com/akiratamcat/joplin-plugin-note-history-diff/compare/v1.0.2...HEAD
+[Unreleased]: https://github.com/akiratamcat/joplin-plugin-note-history-diff/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/akiratamcat/joplin-plugin-note-history-diff/compare/v1.0.2...v1.1.0
 [1.0.2]: https://github.com/akiratamcat/joplin-plugin-note-history-diff/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/akiratamcat/joplin-plugin-note-history-diff/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/akiratamcat/joplin-plugin-note-history-diff/releases/tag/v1.0.0

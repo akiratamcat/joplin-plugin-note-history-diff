@@ -11,6 +11,8 @@ Changes that users notice are always listed. The Japanese version
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-28
+
 ### Added
 
 - Settings in Tools > Options > Note History Diff: font size of the diff (follows the editor font size by default), unchanged lines kept around each change (or no folding), character highlight, layout when the history diff opens (last used, side by side or unified), wrapping of long lines, and ignoring trailing spaces and line endings. A changed setting applies to the history diff on screen at once.
@@ -20,6 +22,10 @@ Changes that users notice are always listed. The Japanese version
 
 - The diff uses the editor monospace font (Options > Editor).
 - The rest of the history diff (buttons, version lists) uses the same text size as Joplin's own interface; it was slightly smaller.
+
+### Fixed
+
+- Pressing on the other side of the side-by-side view while text was selected showed the cell next to the old selection as selected.
 
 ## [1.0.2] - 2026-11-28
 
@@ -53,7 +59,8 @@ First release.
 - Colours for the light and dark themes. Dates follow Joplin's date and time formats.
 - User interface in 11 languages, translated with gettext: English, Japanese, Chinese (Simplified and Traditional), Korean, German, French, Spanish, Italian, Portuguese (Brazil) and Russian.
 
-[Unreleased]: https://github.com/akiratamcat/joplin-plugin-note-history-diff/compare/v1.0.2...HEAD
+[Unreleased]: https://github.com/akiratamcat/joplin-plugin-note-history-diff/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/akiratamcat/joplin-plugin-note-history-diff/compare/v1.0.2...v1.1.0
 [1.0.2]: https://github.com/akiratamcat/joplin-plugin-note-history-diff/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/akiratamcat/joplin-plugin-note-history-diff/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/akiratamcat/joplin-plugin-note-history-diff/releases/tag/v1.0.0
