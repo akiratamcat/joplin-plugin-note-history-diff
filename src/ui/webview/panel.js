@@ -116,6 +116,14 @@
 		// as selected, and was copied too (v1.1.0 test).
 		if (event.target && event.target.closest && event.target.closest('.nhd .ctxmenu')) return;
 		const side = sideOf(event.target);
+		// Pressing on the other side: drop the old selection first. Left in place,
+		// the browser moved it onto the newly selectable side and showed the
+		// cell next to it as selected (v1.1.0 test, also in 1.0.1 and 1.0.2).
+		const current = document.querySelector('.sbs.select-left') ? 'left' : document.querySelector('.sbs.select-right') ? 'right' : null;
+		if (side && current && side !== current) {
+			const selection = window.getSelection();
+			if (selection) selection.removeAllRanges();
+		}
 		document.querySelectorAll('.sbs').forEach(function(sbs) {
 			sbs.classList.toggle('select-left', side === 'left');
 			sbs.classList.toggle('select-right', side === 'right');
