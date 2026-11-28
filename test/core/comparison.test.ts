@@ -11,6 +11,10 @@ function rebuilderOf(versions: { title: string; body: string }[]) {
 	return new RevisionRebuilder(makeRevisions(versions), new RevisionCache(1_000_000));
 }
 
+afterEach(() => {
+	jest.restoreAllMocks();
+});
+
 describe('planDefaultComparison (F1)', () => {
 	test('no revisions', () => {
 		expect(planDefaultComparison(rebuilderOf([]), { ...v1, updatedTime: 1 })).toEqual({ kind: 'no-history' });
@@ -43,6 +47,7 @@ describe('planDefaultComparison (F1)', () => {
 	});
 
 	test('a revision that cannot be rebuilt is reported, not thrown', () => {
+		jest.spyOn(console, 'warn').mockImplementation(() => {});
 		const revisions = makeRevisions([v1, v2]).map((r, i) => (i === 1 ? { ...r, encryption_applied: 1 } : r));
 		const rebuilder = new RevisionRebuilder(revisions, new RevisionCache(1_000_000));
 		const plan = planDefaultComparison(rebuilder, { ...v3, updatedTime: 9 });
@@ -78,6 +83,7 @@ describe('version choices (F2)', () => {
 	});
 
 	test('a revision that cannot be rebuilt, and every later one, has no length', () => {
+		jest.spyOn(console, 'warn').mockImplementation(() => {});
 		const revisions = makeRevisions([v1, v2, v3]).map((r, i) => (i === 1 ? { ...r, encryption_applied: 1 } : r));
 		const rebuilder = new RevisionRebuilder(revisions, new RevisionCache(1_000_000));
 		const choices = listVersionChoices(rebuilder, current);

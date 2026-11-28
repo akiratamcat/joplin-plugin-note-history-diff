@@ -1,5 +1,6 @@
 import { fetchAllRevisionRows, indexRevisions, RevisionRepository, sortRevisions } from '../../src/history/revisionRepository';
 import { growingVersions, makeRevisions, pagedFetcher } from '../helpers/history';
+import { makeTextPatch } from '../../src/history/patch';
 
 describe('revisionRepository', () => {
 	const noteA = makeRevisions(growingVersions(12), 'note-a', 1000);
@@ -56,6 +57,21 @@ describe('revisionRepository', () => {
 		repository.invalidate();
 		await repository.revisionsFor('note-a');
 		expect(fetcher.calls).toBe(2);
+	});
+
+	test('rebuilds cached descendants after an ancestor changes', async () => {
+		const first = { title: 'Title', body: 'Original body' };
+		const rows = makeRevisions([first, { ...first, title: 'Edited title' }]);
+		const repository = new RevisionRepository(pagedFetcher(rows));
+		const initial = await repository.rebuilderFor('note-1');
+		expect(initial.versionAt(1).body).toBe(first.body);
+
+		const updatedBody = 'Body from rewritten ancestor';
+		rows[0] = { ...rows[0], body_diff: makeTextPatch('', updatedBody), updated_time: rows[0].updated_time + 1 };
+		repository.invalidate();
+		const refreshed = await repository.rebuilderFor('note-1');
+		expect(refreshed.versionAt(1).body).toBe(updatedBody);
+		expect(initial.versionAt(1).body).toBe(first.body);
 	});
 
 	test('a failed load is retried on the next call', async () => {

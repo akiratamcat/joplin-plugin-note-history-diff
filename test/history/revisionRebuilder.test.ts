@@ -1,10 +1,15 @@
 import { RevisionCache } from '../../src/history/revisionCache';
+import { makeTextPatch } from '../../src/history/patch';
 import { cacheKey, RebuildError, RevisionRebuilder } from '../../src/history/revisionRebuilder';
 import { growingVersions, makeRevisions } from '../helpers/history';
 
 describe('RevisionRebuilder', () => {
 	const versions = growingVersions(35);
 	const revisions = makeRevisions(versions);
+
+	afterEach(() => {
+		jest.restoreAllMocks();
+	});
 
 	test('rebuilds every version in order', () => {
 		const rebuilder = new RevisionRebuilder(revisions, new RevisionCache(1_000_000), 10);
@@ -43,6 +48,7 @@ describe('RevisionRebuilder', () => {
 	});
 
 	test('reports an encrypted revision', () => {
+		jest.spyOn(console, 'warn').mockImplementation(() => {});
 		const encrypted = revisions.map((r, i) => (i === 5 ? { ...r, encryption_applied: 1 } : r));
 		const rebuilder = new RevisionRebuilder(encrypted, new RevisionCache(1_000_000), 10);
 		expect(rebuilder.versionAt(4)).toEqual(versions[4]);
@@ -55,6 +61,7 @@ describe('RevisionRebuilder', () => {
 	});
 
 	test('reports an invalid patch', () => {
+		jest.spyOn(console, 'warn').mockImplementation(() => {});
 		const broken = revisions.map((r, i) => (i === 3 ? { ...r, title_diff: 'not a patch' } : r));
 		const rebuilder = new RevisionRebuilder(broken, new RevisionCache(1_000_000), 10);
 		expect(() => rebuilder.versionAt(3)).toThrow(expect.objectContaining({ reason: 'invalid-patch', index: 3 }));
@@ -77,10 +84,113 @@ describe('RevisionRebuilder', () => {
 		expect(rebuilder.versionAt(34)).toEqual(versions[34]);
 	});
 
-	test('scan marks a revision that cannot be rebuilt and every later one', () => {
+	test('scan marks a revision that cannot be rebuilt and its descendants', () => {
+		jest.spyOn(console, 'warn').mockImplementation(() => {});
 		const broken = revisions.map((r, i) => (i === 5 ? { ...r, encryption_applied: 1 } : r));
 		const summaries = new RevisionRebuilder(broken, new RevisionCache(1_000_000), 10).scan();
 		expect(summaries[4]).toEqual({ index: 4, ok: true, bodyLength: versions[4].body.length });
 		expect(summaries.slice(5).every(s => !s.ok && 'reason' in s && s.reason === 'encrypted')).toBe(true);
+	});
+
+	test('rebuilds a branch from its recorded parent with another branch in the cache', () => {
+		jest.spyOn(console, 'warn').mockImplementation(() => {});
+		const root = { title: 'Original title', body: 'Original body' };
+		const branch = { title: 'Unrelated heading', body: 'Other content' };
+		const latest = { title: 'Original title edited', body: 'Original body and more' };
+		const [first, other] = makeRevisions([root, branch]);
+		const child = { ...makeRevisions([root, latest])[1], id: 'latest' };
+		const rebuilder = new RevisionRebuilder([first, other, child], new RevisionCache(1_000_000));
+		expect(rebuilder.versionAt(1)).toEqual(branch);
+		expect(rebuilder.versionAt(2)).toEqual(latest);
+
+		const unreadableBranch = { ...other, encryption_applied: 1 };
+		const scan = new RevisionRebuilder([first, unreadableBranch, child], new RevisionCache(1_000_000));
+		expect(scan.scan()).toEqual([
+			{ index: 0, ok: true, bodyLength: root.body.length },
+			{ index: 1, ok: false, reason: 'encrypted' },
+			{ index: 2, ok: true, bodyLength: latest.body.length },
+		]);
+	});
+
+	test('continues from the text returned by a failed hunk and logs counts', () => {
+		const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+		const root = { title: 'First', body: 'Completely unrelated text that shares nothing.' };
+		const latest = { title: 'Third', body: root.body + ' Then an edit.' };
+		const [first, second, third] = makeRevisions([root, { ...root, title: 'Second' }, latest]);
+		second.body_diff = makeTextPatch('The quick brown fox jumps over the lazy dog.', 'The quick brown cat jumps over the lazy dog.');
+		const rebuilder = new RevisionRebuilder([first, second, third], new RevisionCache(1_000_000));
+		expect(rebuilder.versionAt(2)).toEqual(latest);
+		expect(rebuilder.scan()[1]).toEqual({ index: 1, ok: true, bodyLength: root.body.length });
+		expect(warn).toHaveBeenCalledTimes(1);
+		expect(warn).toHaveBeenCalledWith('Note History Diff: patch-not-applied', {
+			revisionId: second.id,
+			parentId: first.id,
+			revisionNumber: 2,
+			revisionCount: 3,
+			titleFailedHunks: 0,
+			titleTotalHunks: 1,
+			bodyFailedHunks: 1,
+			bodyTotalHunks: 1,
+		});
+	});
+
+	test('reports a cycle in the parent chain as invalid-chain', () => {
+		const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+		const [first, second] = makeRevisions([
+			{ title: 'First', body: 'Body 1' },
+			{ title: 'Second', body: 'Body 2' },
+		]);
+
+		const selfCycle = { ...first, parent_id: first.id };
+		const selfRebuilder = new RevisionRebuilder([selfCycle], new RevisionCache(1_000_000));
+		expect(() => selfRebuilder.versionAt(0)).toThrow(expect.objectContaining({ reason: 'invalid-chain', index: 0 }));
+		expect(selfRebuilder.scan()).toEqual([{ index: 0, ok: false, reason: 'invalid-chain' }]);
+		expect(warn).toHaveBeenCalledWith('Note History Diff: invalid-chain', {
+			revisionId: selfCycle.id,
+			parentId: selfCycle.id,
+			revisionNumber: 1,
+			revisionCount: 1,
+		});
+
+		const cycleA = { ...first, parent_id: second.id };
+		const cycleB = { ...second, parent_id: first.id };
+		const pairRebuilder = new RevisionRebuilder([cycleA, cycleB], new RevisionCache(1_000_000));
+		expect(() => pairRebuilder.versionAt(0)).toThrow(expect.objectContaining({ reason: 'invalid-chain' }));
+		expect(pairRebuilder.scan()).toEqual([
+			{ index: 0, ok: false, reason: 'invalid-chain' },
+			{ index: 1, ok: false, reason: 'invalid-chain' },
+		]);
+	});
+
+	test('warns and falls back to empty text when parent_id is missing from the list', () => {
+		const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+		const standalone = { title: 'Orphan', body: 'Standalone body' };
+		const [root] = makeRevisions([standalone]);
+		const orphan = { ...root, parent_id: 'missing-parent-id' };
+		const rebuilder = new RevisionRebuilder([orphan], new RevisionCache(1_000_000));
+		expect(rebuilder.versionAt(0)).toEqual(standalone);
+		expect(rebuilder.scan()).toEqual([{ index: 0, ok: true, bodyLength: standalone.body.length }]);
+		expect(warn).toHaveBeenCalledTimes(1);
+		expect(warn).toHaveBeenCalledWith('Note History Diff: missing-parent', {
+			revisionId: orphan.id,
+			parentId: 'missing-parent-id',
+			revisionNumber: 1,
+			revisionCount: 1,
+		});
+	});
+
+	test('rebuilds when a recorded parent appears later in display order', () => {
+		const parentVersion = { title: 'Parent', body: 'Base body' };
+		const childVersion = { title: 'Child', body: 'Base body with child edit' };
+		const [parent, child] = makeRevisions([parentVersion, childVersion]);
+		const rebuilder = new RevisionRebuilder([child, parent], new RevisionCache(1_000_000));
+		expect(rebuilder.versionAt(0)).toEqual(childVersion);
+		expect(rebuilder.versionAt(1)).toEqual(parentVersion);
+
+		const scanned = new RevisionRebuilder([child, parent], new RevisionCache(1_000_000));
+		expect(scanned.scan()).toEqual([
+			{ index: 0, ok: true, bodyLength: childVersion.body.length },
+			{ index: 1, ok: true, bodyLength: parentVersion.body.length },
+		]);
 	});
 });

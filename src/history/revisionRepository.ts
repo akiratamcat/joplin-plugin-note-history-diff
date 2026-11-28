@@ -15,7 +15,7 @@ export async function fetchAllRevisionRows(fetchPage: RevisionPageFetcher): Prom
 	return rows;
 }
 
-// Oldest first, which is the order patches must be applied in.
+// Oldest first for display and default comparison selection.
 export function sortRevisions(rows: RevisionRow[]): RevisionRow[] {
 	return rows.slice().sort((a, b) => {
 		if (a.item_updated_time !== b.item_updated_time) return a.item_updated_time - b.item_updated_time;
@@ -50,11 +50,13 @@ const DEFAULT_CHECKPOINT_INTERVAL = 10;
 export class RevisionRepository {
 	private index: Map<string, RevisionRow[]> | null = null;
 	private loading: Promise<Map<string, RevisionRow[]>> | null = null;
-	private readonly cache: RevisionCache;
+	private cache: RevisionCache;
+	private readonly cacheMaxChars: number;
 	private readonly checkpointInterval: number;
 
 	constructor(private readonly fetchPage: RevisionPageFetcher, options: RevisionRepositoryOptions = {}) {
-		this.cache = new RevisionCache(options.cacheMaxChars ?? DEFAULT_CACHE_MAX_CHARS);
+		this.cacheMaxChars = options.cacheMaxChars ?? DEFAULT_CACHE_MAX_CHARS;
+		this.cache = new RevisionCache(this.cacheMaxChars);
 		this.checkpointInterval = options.checkpointInterval ?? DEFAULT_CHECKPOINT_INTERVAL;
 	}
 
@@ -64,14 +66,16 @@ export class RevisionRepository {
 	}
 
 	public async rebuilderFor(noteId: string): Promise<RevisionRebuilder> {
-		return new RevisionRebuilder(await this.revisionsFor(noteId), this.cache, this.checkpointInterval);
+		const cache = this.cache;
+		return new RevisionRebuilder(await this.revisionsFor(noteId), cache, this.checkpointInterval);
 	}
 
-	// Drops the index (re-read on next use). Cached versions stay valid because
-	// their keys include each revision's update time.
+	// Sync and retention can change a revision's ancestors without changing
+	// the revision itself. Each load gets its own cache.
 	public invalidate(): void {
 		this.index = null;
 		this.loading = null;
+		this.cache = new RevisionCache(this.cacheMaxChars);
 	}
 
 	public get cachedChars(): number {
