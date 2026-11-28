@@ -10,11 +10,13 @@
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-11-28
+
 ### 修正
 
-- Joplin 本体の履歴画面では開けるのに、比較しようとすると「A revision could not be read (patch-not-applied).」と表示されるノートがあった。版の組み立て方を Joplin 本体に合わせ、各版の差分を、日付でひとつ前の版ではなく、その差分が記録されたもとの版に当てるようにした。保存されている差分の一部が文字に合わないときも、Joplin 本体と同じように残りの差分を当てて続ける。比較は開くが、合わなかった部分の変更は抜けることがある。このときプラグインのコンソールに、版の ID を含む警告を出す（ノートの文字は含まない）。
-- 記録されている版どうしのつながりが輪になっているときは、「A revision could not be read (invalid-chain).」と表示する。
-- 読めない版があっても、その版に頼らない後の版の文字数は、版の一覧に表示されるようにした。
+- Joplin 本体の履歴画面では開けるのに、比較しようとすると「A revision could not be read (patch-not-applied).」と表示されるノートがあった。版の組み立て方を Joplin 本体に合わせ、各版の差分を、日付でひとつ前の版ではなく、その差分が記録されたもとの版に当てるようにした。保存されている差分の一部が文字に合わないときも、Joplin 本体と同じように残りの差分を当てて続ける。比較は開くが、合わなかった部分の変更は抜けることがある。このときプラグインのコンソールに、版の ID を含む警告を出す（ノートの文字は含まない）。（[#2](https://github.com/akiratamcat/joplin-plugin-note-history-diff/issues/2)、[#4](https://github.com/akiratamcat/joplin-plugin-note-history-diff/pull/4) by [@bwat47](https://github.com/bwat47)）
+- 記録されている版どうしのつながりが輪になっているときは、「A revision could not be read (invalid-chain).」と表示する。（[#4](https://github.com/akiratamcat/joplin-plugin-note-history-diff/pull/4) by [@bwat47](https://github.com/bwat47)）
+- 読めない版があっても、その版に頼らない後の版の文字数は、版の一覧に表示されるようにした。（[#4](https://github.com/akiratamcat/joplin-plugin-note-history-diff/pull/4) by [@bwat47](https://github.com/bwat47)）
 
 ## [1.0.1] - 2026-11-26
 
@@ -40,6 +42,7 @@
 - 明るいテーマと暗いテーマに合わせた色。日時は Joplin の「日付の形式」「時刻の形式」に従う。
 - 11 言語の画面（gettext で翻訳）：英語、日本語、中国語（簡体字・繁体字）、韓国語、ドイツ語、フランス語、スペイン語、イタリア語、ポルトガル語（ブラジル）、ロシア語。
 
-[Unreleased]: https://github.com/akiratamcat/joplin-plugin-note-history-diff/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/akiratamcat/joplin-plugin-note-history-diff/compare/v1.0.2...HEAD
+[1.0.2]: https://github.com/akiratamcat/joplin-plugin-note-history-diff/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/akiratamcat/joplin-plugin-note-history-diff/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/akiratamcat/joplin-plugin-note-history-diff/releases/tag/v1.0.0

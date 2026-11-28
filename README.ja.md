@@ -58,6 +58,12 @@ Joplin のプラグインの画面（Windows と Linux は「ツール」→「�
 
 不具合、質問、要望は [Issues](https://github.com/akiratamcat/joplin-plugin-note-history-diff/issues) にお寄せください。日本語でも英語でもかまいません。セキュリティの問題は [SECURITY.ja.md](SECURITY.ja.md) を見てください。ビルドや開発への参加は [CONTRIBUTING.ja.md](CONTRIBUTING.ja.md) を見てください。
 
+## 協力してくださった方
+
+Note History Diff に協力してくださった皆さんに感謝します。
+
+- [@bwat47](https://github.com/bwat47)：同期で枝分かれした履歴の不具合の報告と修正（[#2](https://github.com/akiratamcat/joplin-plugin-note-history-diff/issues/2)、[#4](https://github.com/akiratamcat/joplin-plugin-note-history-diff/pull/4)）
+
 ## ライセンス
 
 Note History Diff は [MIT ライセンス](LICENSE)で公開しています。

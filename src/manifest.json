@@ -2,7 +2,7 @@
 	"manifest_version": 1,
 	"id": "io.github.akiratamcat.note-history-diff",
 	"app_min_version": "3.7",
-	"version": "1.0.1",
+	"version": "1.0.2",
 	"name": "Note History Diff",
 	"description": "Compare two revisions of a note and see what changed. / ノートの 2 つの版を比べて、変わったところを表示します。",
 	"author": "akiratamcat",

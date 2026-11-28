@@ -58,6 +58,12 @@ Joplin's "Toggle editors" button in the note toolbar also switches between the e
 
 Please use the [Issues](https://github.com/akiratamcat/joplin-plugin-note-history-diff/issues) page for bugs, questions and requests. English or Japanese is fine. For security problems, see [SECURITY.md](SECURITY.md). To build the plugin or contribute, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
+## Contributors
+
+Thank you to everyone who has contributed to Note History Diff.
+
+- [@bwat47](https://github.com/bwat47): report and fix for revision histories branched by sync ([#2](https://github.com/akiratamcat/joplin-plugin-note-history-diff/issues/2), [#4](https://github.com/akiratamcat/joplin-plugin-note-history-diff/pull/4))
+
 ## License
 
 Note History Diff is released under the [MIT License](LICENSE).
@@ -139,6 +145,12 @@ Joplin のプラグインの画面（Windows と Linux は「ツール」→「�
 ### 問題の報告
 
 不具合、質問、要望は [Issues](https://github.com/akiratamcat/joplin-plugin-note-history-diff/issues) にお寄せください。日本語でも英語でもかまいません。セキュリティの問題は [SECURITY.ja.md](SECURITY.ja.md) を見てください。ビルドや開発への参加は [CONTRIBUTING.ja.md](CONTRIBUTING.ja.md) を見てください。
+
+### 協力してくださった方
+
+Note History Diff に協力してくださった皆さんに感謝します。
+
+- [@bwat47](https://github.com/bwat47)：同期で枝分かれした履歴の不具合の報告と修正（[#2](https://github.com/akiratamcat/joplin-plugin-note-history-diff/issues/2)、[#4](https://github.com/akiratamcat/joplin-plugin-note-history-diff/pull/4)）
 
 ### ライセンス
 

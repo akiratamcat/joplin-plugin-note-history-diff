@@ -11,11 +11,13 @@ Changes that users notice are always listed. The Japanese version
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-11-28
+
 ### Fixed
 
-- Some notes could not be compared and showed "A revision could not be read (patch-not-applied)." even though Joplin's own history viewer could open them. Revisions are now rebuilt the way Joplin rebuilds them: each change is applied to the revision it was recorded against, not to the one just before it by date. When part of a stored change no longer fits its text, the rest of the change is still used, as in Joplin. The comparison then opens, but it can miss that part of the change. A warning with the revision ID, and no note text, is written to the plugin console.
-- If the recorded links between revisions form a loop, the comparison shows "A revision could not be read (invalid-chain)."
-- A revision that cannot be read no longer hides the length of later revisions that do not depend on it in the version list.
+- Some notes could not be compared and showed "A revision could not be read (patch-not-applied)." even though Joplin's own history viewer could open them. Revisions are now rebuilt the way Joplin rebuilds them: each change is applied to the revision it was recorded against, not to the one just before it by date. When part of a stored change no longer fits its text, the rest of the change is still used, as in Joplin. The comparison then opens, but it can miss that part of the change. A warning with the revision ID, and no note text, is written to the plugin console. ([#2](https://github.com/akiratamcat/joplin-plugin-note-history-diff/issues/2), [#4](https://github.com/akiratamcat/joplin-plugin-note-history-diff/pull/4) by [@bwat47](https://github.com/bwat47))
+- If the recorded links between revisions form a loop, the comparison shows "A revision could not be read (invalid-chain)." ([#4](https://github.com/akiratamcat/joplin-plugin-note-history-diff/pull/4) by [@bwat47](https://github.com/bwat47))
+- A revision that cannot be read no longer hides the length of later revisions that do not depend on it in the version list. ([#4](https://github.com/akiratamcat/joplin-plugin-note-history-diff/pull/4) by [@bwat47](https://github.com/bwat47))
 
 ## [1.0.1] - 2026-11-26
 
@@ -41,6 +43,7 @@ First release.
 - Colours for the light and dark themes. Dates follow Joplin's date and time formats.
 - User interface in 11 languages, translated with gettext: English, Japanese, Chinese (Simplified and Traditional), Korean, German, French, Spanish, Italian, Portuguese (Brazil) and Russian.
 
-[Unreleased]: https://github.com/akiratamcat/joplin-plugin-note-history-diff/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/akiratamcat/joplin-plugin-note-history-diff/compare/v1.0.2...HEAD
+[1.0.2]: https://github.com/akiratamcat/joplin-plugin-note-history-diff/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/akiratamcat/joplin-plugin-note-history-diff/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/akiratamcat/joplin-plugin-note-history-diff/releases/tag/v1.0.0
